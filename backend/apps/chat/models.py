@@ -23,6 +23,13 @@ class Conversation(models.Model):
     def __str__(self):
         return f"Conversation {self.id} - {self.title or 'Untitled'}"
 
+    @staticmethod
+    def get_or_create_for_session(session_id: str, language: str = 'en', title: str = ''):
+        conv = Conversation.objects.filter(session_id=session_id).order_by('-updated_at').first()
+        if conv:
+            return conv, False
+        return Conversation.objects.create(session_id=session_id, language=language, title=title[:255]), True
+
 
 class Message(models.Model):
     """A message in a conversation"""
