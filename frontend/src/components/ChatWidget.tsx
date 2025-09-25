@@ -1,6 +1,6 @@
 // frontend/src/components/ChatWidget.tsx
 
-import { useState } from 'react'
+import React, { useState, useRef, useLayoutEffect, useCallback } from 'react'
 import { chatAPI, ChatRequest } from '../services/api'
 
 interface ChatWidgetProps {
@@ -21,15 +21,37 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
         {
             id: '1',
             role: 'assistant',
-            content: 'Hello! I\'m your AI assistant. I can help you with questions about documentation. What would you like to know?',
+            content:
+                "Hello! I'm your AI assistant. I can help you with questions about documentation. What would you like to know?",
             timestamp: new Date(),
-        }
+        },
     ])
     const [input, setInput] = useState<string>('')
     const [isLoading, setIsLoading] = useState<boolean>(false)
     const [conversationId, setConversationId] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
 
+    // ----- Auto-scroll setup -----
+    const listRef = useRef<HTMLDivElement | null>(null)
+    const endRef = useRef<HTMLDivElement | null>(null)
+
+    const scrollToBottom = useCallback((smooth = true) => {
+        if (endRef.current) {
+            endRef.current.scrollIntoView({
+                behavior: smooth ? 'smooth' : 'auto',
+                block: 'end',
+            })
+        } else if (listRef.current) {
+            listRef.current.scrollTop = listRef.current.scrollHeight
+        }
+    }, [])
+
+    useLayoutEffect(() => {
+        // Scroll after messages or loading state change
+        scrollToBottom(true)
+    }, [messages, isLoading, scrollToBottom])
+
+    // ----- Actions -----
     const handleSend = async (): Promise<void> => {
         if (!input.trim() || isLoading) return
 
@@ -40,86 +62,74 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
             timestamp: new Date(),
         }
 
-        setMessages(prev => [...prev, userMessage])
+        setMessages((prev) => [...prev, userMessage])
+        // Immediate (non-smooth) scroll for instant feedback
+        queueMicrotask(() => scrollToBottom(false))
+
         setInput('')
         setIsLoading(true)
         setError(null)
 
         try {
-            // Prepare API request
             const chatRequest: ChatRequest = {
                 message: userMessage.content,
-                language: 'en'
+                language: 'en',
             }
+            if (conversationId) chatRequest.conversation_id = conversationId
 
-            // Add conversation ID if we have one
-            if (conversationId) {
-                chatRequest.conversation_id = conversationId
-            }
-
-            console.log('📤 Sending to backend:', chatRequest)
-
-            // Call real backend API
+            // Send to backend
             const response = await chatAPI.sendMessage(chatRequest)
 
-            console.log('📥 Backend response:', response)
-
-            // Save conversation ID for future messages
+            // Save conversation ID for subsequent turns
             if (response.conversation_id && !conversationId) {
                 setConversationId(response.conversation_id)
             }
 
-            // Add AI response to messages
+            // Add assistant message
             const assistantMessage: Message = {
                 id: response.message.id,
                 role: 'assistant',
                 content: response.message.content,
                 timestamp: new Date(response.message.created_at),
-                citations: response.message.citations || []
+                citations: response.message.citations || [],
             }
-
-            setMessages(prev => [...prev, assistantMessage])
-
+            setMessages((prev) => [...prev, assistantMessage])
         } catch (error: any) {
             console.error('❌ Chat API Error:', error)
+            let errorMessage =
+                "Sorry, I'm having technical difficulties. Please try again."
 
-            // Show error message to user
-            let errorMessage = 'Sorry, I\'m having technical difficulties. Please try again.'
-
-            if (error.response?.status === 400) {
+            if (error?.response?.status === 400) {
                 errorMessage = 'Invalid request. Please check your message and try again.'
-            } else if (error.response?.status === 500) {
+            } else if (error?.response?.status === 500) {
                 errorMessage = 'Server error. Please try again in a moment.'
-            } else if (error.code === 'ERR_NETWORK' || !error.response) {
-                errorMessage = 'Cannot connect to server. Please check if the backend is running on port 8000.'
+            } else if (error?.code === 'ERR_NETWORK' || !error?.response) {
+                errorMessage =
+                    'Cannot connect to server. Please check if the backend is running on port 8000.'
             }
 
             setError(errorMessage)
 
-            // Add error message to chat
             const errorMsg: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
                 content: errorMessage,
                 timestamp: new Date(),
             }
-
-            setMessages(prev => [...prev, errorMsg])
+            setMessages((prev) => [...prev, errorMsg])
         } finally {
             setIsLoading(false)
         }
     }
 
-    const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
             handleSend()
         }
     }
 
-    const clearError = (): void => {
-        setError(null)
-    }
+    const clearError = (): void => setError(null)
 
     if (!isOpen) return null
 
@@ -132,9 +142,7 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                         <span className="text-xl">🤖</span>
                         <h3 className="font-semibold">AI Assistant</h3>
                         {conversationId && (
-                            <span className="text-xs opacity-75">
-                Connected
-              </span>
+                            <span className="text-xs opacity-75">Connected</span>
                         )}
                     </div>
                     <button
@@ -161,11 +169,18 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                 )}
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div
+                    ref={listRef}
+                    className="flex-1 overflow-y-auto p-4 space-y-4"
+                    aria-live="polite"
+                    aria-relevant="additions"
+                >
                     {messages.map((message) => (
                         <div
                             key={message.id}
-                            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                            className={`flex ${
+                                message.role === 'user' ? 'justify-end' : 'justify-start'
+                            }`}
                         >
                             <div
                                 className={`max-w-[80%] rounded-lg px-4 py-2 ${
@@ -176,7 +191,6 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                             >
                                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
 
-                                {/* Show citations if available */}
                                 {message.citations && message.citations.length > 0 && (
                                     <div className="mt-2 text-xs opacity-75">
                                         📚 Citations: {message.citations.length}
@@ -195,9 +209,15 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                         <div className="flex justify-start">
                             <div className="bg-gray-100 rounded-lg px-4 py-2">
                                 <div className="flex gap-1 items-center">
-                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                                    <div
+                                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                                        style={{ animationDelay: '0.1s' }}
+                                    />
+                                    <div
+                                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                                        style={{ animationDelay: '0.2s' }}
+                                    />
                                     <span className="text-xs text-gray-500 ml-2">
                     Calling backend API...
                   </span>
@@ -205,6 +225,9 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                             </div>
                         </div>
                     )}
+
+                    {/* Sentinel for auto-scroll */}
+                    <div ref={endRef} />
                 </div>
 
                 {/* Input */}
@@ -213,7 +236,7 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
             <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyDown}
                 placeholder="Type your question..."
                 className="flex-1 resize-none border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent"
                 rows={2}
@@ -224,6 +247,7 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                             disabled={!input.trim() || isLoading}
                             className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg transition-colors"
                             type="button"
+                            aria-label="Send message"
                         >
                             {isLoading ? '⏳' : '📤'}
                         </button>
@@ -231,12 +255,8 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
 
                     {/* Connection Status */}
                     <div className="text-xs text-gray-500 mt-2 flex justify-between">
-            <span>
-              Backend: {conversationId ? 'Connected' : 'Ready'}
-            </span>
-                        <span>
-              API: http://localhost:8000/api
-            </span>
+                        <span>Backend: {conversationId ? 'Connected' : 'Ready'}</span>
+                        <span>API: http://localhost:8000/api</span>
                     </div>
                 </div>
             </div>
