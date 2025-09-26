@@ -73,7 +73,7 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
         try {
             const chatRequest: ChatRequest = {
                 message: userMessage.content,
-                language: 'en',
+                language: 'auto',
             }
             if (conversationId) chatRequest.conversation_id = conversationId
 

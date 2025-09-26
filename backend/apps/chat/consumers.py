@@ -34,7 +34,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
         query = parse_qs(urlparse(self.scope['query_string'].decode()).query)
         self.session_id = (query.get('session_id', [None])[0]) or self.room_name  # fallback to room as session
         self.conversation_id = query.get('conversation_id', [None])[0]
+
+        # FIX: Ensure default language is English
         self.language = query.get('lang', ['en'])[0]
+
+        # Validate language code
+        if self.language not in ['en', 'de', 'fr', 'es']:
+            logger.info(f"DEBUG: Invalid WebSocket language '{self.language}', defaulting to English")
+            self.language = 'en'
+
+        logger.info(f"DEBUG: WebSocket connected with language: {self.language}")
 
         # Get or create Conversation
         self.conversation = await self._get_or_create_conversation()
