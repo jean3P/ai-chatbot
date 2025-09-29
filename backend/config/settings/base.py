@@ -18,6 +18,9 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
+# Feature Flags
+USE_NEW_RAG_ARCHITECTURE = os.getenv('USE_NEW_RAG_ARCHITECTURE', 'False').lower() == 'true'
+
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
 # Application definition

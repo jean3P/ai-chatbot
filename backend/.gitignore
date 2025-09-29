@@ -1,4 +1,203 @@
+# ============================================================
+# Python
+# ============================================================
+*.py[cod]
+*$py.class
+*.so
+.Python
+__pycache__/
+*.pyc
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# ============================================================
+# Django
+# ============================================================
+*.log
+db.sqlite3
+db.sqlite3-journal
+
+# Media files (uploaded documents)
+media/
+!media/.gitkeep
+
+# Static files
+staticfiles/
+!staticfiles/.gitkeep
+static_collected/
+
+# Django migrations (optional - some teams commit these)
+# Uncomment if you don't want to track migrations
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# ============================================================
+# Environment & Configuration
+# ============================================================
 .env
 .env.local
-.env.example
-.venv
+.env.*.local
+*.env
+
+# ============================================================
+# Virtual Environments
+# ============================================================
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# ============================================================
+# IDEs
+# ============================================================
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================================
+# OS
+# ============================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ============================================================
+# Logs
+# ============================================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================================
+# Celery
+# ============================================================
+celerybeat-schedule
+celerybeat.pid
+
+# ============================================================
+# Documentation
+# ============================================================
+docs/_build/
+site/
+
+# ============================================================
+# Jupyter Notebook
+# ============================================================
+.ipynb_checkpoints
+
+# ============================================================
+# pyenv
+# ============================================================
+.python-version
+
+# ============================================================
+# Project Specific
+# ============================================================
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Backup files
+*.bak
+*.backup
+
+# Code extraction output
+combined_code.txt
+code_text.txt
+
+# Local testing
+test_output/
+test_files/
+
+# Development databases
+*.db
+*.sqlite
+
+# ============================================================
+# DO NOT IGNORE - Important Files
+# ============================================================
+# These are explicitly NOT ignored (ensure they're tracked)
+# 
+# !apps/domain/
+# !apps/adapters/
+# !apps/infrastructure/
+# !apps/*/README.md
+# !apps/*/__init__.py
+
+# Keep empty directories with .gitkeep
+!.gitkeep
