@@ -80,13 +80,25 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
-# Database
+# ============================================================================
+# DATABASE CONFIGURATION
+# ============================================================================
+
+# Import database configuration module
+from config.settings.databases import get_database_config
+
+# Get environment from environment variable
+# Defaults to 'development' for local work
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+
+# Load database configuration for current environment
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': get_database_config(ENVIRONMENT)
 }
+
+# ============================================================================
+# END DATABASE CONFIGURATION
+# ============================================================================
 
 # Redis for channels
 CHANNEL_LAYERS = {
