@@ -18,6 +18,32 @@ services:
       retries: 5
     restart: unless-stopped
 
+  postgres-test:
+    image: pgvector/pgvector:pg15
+    container_name: chatbot-postgres-test
+    environment:
+      POSTGRES_DB: test_chatbot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=en_US.UTF-8"
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    command: >
+      postgres
+      -c fsync=off
+      -c synchronous_commit=off
+      -c full_page_writes=off
+      -c max_connections=100
+      -c shared_buffers=128MB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d test_chatbot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     container_name: chatbot-redis
