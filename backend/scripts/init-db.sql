@@ -13,6 +13,7 @@
 -- - chatbot_readonly:  Read-only access for analytics/reporting
 --
 -- Note: This script is idempotent (safe to run multiple times)
+-- Note: Works with any database name (uses current_database())
 -- ============================================================================
 
 -- ============================================================================
@@ -45,8 +46,12 @@ BEGIN
 END
 $$;
 
--- Grant connection permission
-GRANT CONNECT ON DATABASE chatbot_dev TO chatbot_readonly;
+-- Grant connection permission to current database (not hardcoded)
+DO $$
+BEGIN
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO chatbot_readonly', current_database());
+END
+$$;
 
 -- Grant usage on public schema
 GRANT USAGE ON SCHEMA public TO chatbot_readonly;
