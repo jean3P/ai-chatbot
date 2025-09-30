@@ -10,8 +10,11 @@ from uuid import UUID
 
 from django.db import connection
 
-from apps.domain.models import (ChunkResult, EmbeddingDimensionMismatchError,
-                                RetrieverError)
+from apps.domain.models import (
+    ChunkResult,
+    EmbeddingDimensionMismatchError,
+    RetrieverError,
+)
 
 logger = logging.getLogger(__name__)
 

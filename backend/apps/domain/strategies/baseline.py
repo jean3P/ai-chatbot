@@ -11,9 +11,16 @@ import logging
 import re
 from typing import Dict, List, Optional
 
-from apps.domain.models import (Answer, Chunk, Citation, DocumentType,
-                                InsufficientContextError, Message, MessageRole,
-                                Source)
+from apps.domain.models import (
+    Answer,
+    Chunk,
+    Citation,
+    DocumentType,
+    InsufficientContextError,
+    Message,
+    MessageRole,
+    Source,
+)
 from apps.domain.ports.embeddings import IEmbeddingProvider
 from apps.domain.ports.llm import ILLMProvider
 from apps.domain.ports.retriever import IVectorStore

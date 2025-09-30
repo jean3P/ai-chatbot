@@ -15,13 +15,18 @@ from rest_framework.response import Response
 # Old architecture imports
 from apps.core.openrouter import openrouter_client
 from apps.domain.models import ValidationError as DomainValidationError
+
 # New architecture imports
 from apps.infrastructure.container import create_chat_service
 from apps.rag.pipeline import rag_pipeline
 
 from .models import Conversation, Message
-from .serializers import (ChatRequestSerializer, ConversationSerializer,
-                          FeedbackSerializer, MessageSerializer)
+from .serializers import (
+    ChatRequestSerializer,
+    ConversationSerializer,
+    FeedbackSerializer,
+    MessageSerializer,
+)
 
 logger = logging.getLogger(__name__)
 

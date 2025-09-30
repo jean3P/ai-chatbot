@@ -15,6 +15,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.development")
 django.setup()
 
 import logging
+
 # Setup logging with Windows-compatible formatting
 import sys
 

@@ -11,11 +11,16 @@ import logging
 from typing import Optional
 from uuid import UUID
 
-from apps.domain.models import (Answer, Conversation, InsufficientContextError,
-                                Message, MessageRole, NotFoundError,
-                                ValidationError)
-from apps.domain.ports.repositories import (IConversationRepository,
-                                            IMessageRepository)
+from apps.domain.models import (
+    Answer,
+    Conversation,
+    InsufficientContextError,
+    Message,
+    MessageRole,
+    NotFoundError,
+    ValidationError,
+)
+from apps.domain.ports.repositories import IConversationRepository, IMessageRepository
 from apps.domain.strategies.base import IRagStrategy
 
 logger = logging.getLogger(__name__)

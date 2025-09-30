@@ -81,8 +81,9 @@ def create_embedding_provider(config: Dict[str, Any]):
         return FakeEmbedding(dimension=config.get("dimension", 384))
 
     elif provider_type == "sentence_transformers":
-        from apps.adapters.embeddings.sentence_transformers import \
-            SentenceTransformersEmbedding
+        from apps.adapters.embeddings.sentence_transformers import (
+            SentenceTransformersEmbedding,
+        )
 
         return SentenceTransformersEmbedding(
             model_name=config.get("model", "all-MiniLM-L6-v2"),
@@ -156,13 +157,11 @@ def create_message_repository(use_inmemory: bool = False):
         Implementation of IMessageRepository
     """
     if use_inmemory:
-        from apps.adapters.repositories.inmemory_repos import \
-            InMemoryMessageRepository
+        from apps.adapters.repositories.inmemory_repos import InMemoryMessageRepository
 
         return InMemoryMessageRepository()
     else:
-        from apps.adapters.repositories.django_repos import \
-            DjangoMessageRepository
+        from apps.adapters.repositories.django_repos import DjangoMessageRepository
 
         return DjangoMessageRepository()
 
@@ -178,13 +177,13 @@ def create_conversation_repository(use_inmemory: bool = False):
         Implementation of IConversationRepository
     """
     if use_inmemory:
-        from apps.adapters.repositories.inmemory_repos import \
-            InMemoryConversationRepository
+        from apps.adapters.repositories.inmemory_repos import (
+            InMemoryConversationRepository,
+        )
 
         return InMemoryConversationRepository()
     else:
-        from apps.adapters.repositories.django_repos import \
-            DjangoConversationRepository
+        from apps.adapters.repositories.django_repos import DjangoConversationRepository
 
         return DjangoConversationRepository()
 

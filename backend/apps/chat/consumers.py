@@ -14,8 +14,10 @@ from django.conf import settings
 
 from apps.chat.models import Conversation, Message
 from apps.chat.views import get_system_prompt
+
 # Old architecture
 from apps.core.openrouter import openrouter_client
+
 # New architecture
 from apps.infrastructure.container import create_chat_service
 

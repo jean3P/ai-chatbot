@@ -7,10 +7,8 @@ Run with: python manage.py shell < apps/infrastructure/test_container.py
 import os
 
 os.environ["ENVIRONMENT"] = "test"
-
 from apps.infrastructure.config import get_config, get_environment
-from apps.infrastructure.container import (create_chat_service,
-                                           print_service_info)
+from apps.infrastructure.container import create_chat_service, print_service_info
 
 
 def test_container():

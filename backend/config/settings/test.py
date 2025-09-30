@@ -4,13 +4,15 @@ Test environment settings.
 
 This file is used exclusively for running tests.
 """
-import os
-from pathlib import Path
 
 from .base import *
 
 # Force test environment
 ENVIRONMENT = "test"
+
+# Get port from environment BEFORE loading dotenv
+# This ensures CI can override the port
+DB_PORT = os.environ.get("DB_PORT", "5433")  # Read early
 
 # Override with test-specific environment variables
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -20,17 +22,17 @@ from dotenv import load_dotenv
 
 env_test_path = BASE_DIR / ".env.test"
 if env_test_path.exists():
-    load_dotenv(env_test_path, override=True)
+    load_dotenv(env_test_path, override=False)
 
 # Test database configuration
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "test_chatbot",
-        "USER": "postgres",
-        "PASSWORD": "postgres",
-        "HOST": "127.0.0.1",
-        "PORT": "5433",
+        "NAME": os.environ.get("DB_NAME", "test_chatbot"),
+        "USER": os.environ.get("DB_USER", "postgres"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", "postgres"),
+        "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
+        "PORT": DB_PORT,  # Use the early-captured port
         "CONN_MAX_AGE": 60,
         "ATOMIC_REQUESTS": True,
         "OPTIONS": {
