@@ -34,3 +34,12 @@ dev = [
     "pytest>=8.4.2",
     "pytest-django>=4.11.1",
 ]
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 88
