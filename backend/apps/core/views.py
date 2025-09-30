@@ -77,3 +77,19 @@ def database_health_check(request):
             },
             status=503,
         )
+
+
+def api_root(request):
+    """API root endpoint showing available endpoints"""
+    return JsonResponse(
+        {
+            "message": "AI Chatbot API",
+            "version": "1.0",
+            "endpoints": {
+                "health": "/api/health/db",
+                "chat": "/api/chat/",
+                "documents": "/api/documents/",
+                "admin": "/admin/",
+            },
+        }
+    )
