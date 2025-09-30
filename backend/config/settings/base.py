@@ -96,7 +96,7 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 DATABASES = {
     "default": {
-        **get_database_config(ENVIRONMENT),  # ✓ Unpack the dictionary
+        **get_database_config(ENVIRONMENT),
         "OPTIONS": {
             **get_database_config(ENVIRONMENT).get("OPTIONS", {}),
             "connect_timeout": 5,
