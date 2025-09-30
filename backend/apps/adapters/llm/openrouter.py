@@ -4,8 +4,9 @@ OpenRouter LLM Provider Adapter
 
 Implements ILLMProvider using OpenRouter API for accessing multiple LLM models.
 """
-from typing import List, Dict, Iterator
 import logging
+from typing import Dict, Iterator, List
+
 import openai
 
 from apps.domain.models import LLMProviderError
@@ -21,12 +22,12 @@ class OpenRouterLLM:
     """
 
     def __init__(
-            self,
-            api_key: str,
-            base_url: str = "https://openrouter.ai/api/v1",
-            model: str = "gpt-4o-mini",
-            temperature: float = 0.1,
-            max_tokens: int = 1000
+        self,
+        api_key: str,
+        base_url: str = "https://openrouter.ai/api/v1",
+        model: str = "gpt-4o-mini",
+        temperature: float = 0.1,
+        max_tokens: int = 1000,
     ):
         """
         Initialize OpenRouter LLM client
@@ -42,19 +43,16 @@ class OpenRouterLLM:
             raise ValueError("OpenRouter API key is required")
 
         self.api_key = api_key
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
 
         # Initialize OpenAI client (compatible with OpenRouter)
-        self.client = openai.OpenAI(
-            api_key=api_key,
-            base_url=base_url
-        )
+        self.client = openai.OpenAI(api_key=api_key, base_url=base_url)
 
         # Track usage
-        self.tokens_used = {'input': 0, 'output': 0, 'total': 0}
+        self.tokens_used = {"input": 0, "output": 0, "total": 0}
         self.last_response = None
 
     def generate(self, messages: List[Dict[str, str]], **kwargs) -> str:
@@ -73,8 +71,8 @@ class OpenRouterLLM:
         """
         try:
             # Override defaults with kwargs if provided
-            temperature = kwargs.get('temperature', self.temperature)
-            max_tokens = kwargs.get('max_tokens', self.max_tokens)
+            temperature = kwargs.get("temperature", self.temperature)
+            max_tokens = kwargs.get("max_tokens", self.max_tokens)
 
             logger.debug(
                 f"Generating completion with model={self.model}, "
@@ -87,18 +85,18 @@ class OpenRouterLLM:
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                stream=False
+                stream=False,
             )
 
             # Store response for inspection
             self.last_response = response
 
             # Track token usage
-            if hasattr(response, 'usage') and response.usage:
+            if hasattr(response, "usage") and response.usage:
                 self.tokens_used = {
-                    'input': response.usage.prompt_tokens,
-                    'output': response.usage.completion_tokens,
-                    'total': response.usage.total_tokens
+                    "input": response.usage.prompt_tokens,
+                    "output": response.usage.completion_tokens,
+                    "total": response.usage.total_tokens,
                 }
                 logger.info(f"Tokens used: {self.tokens_used['total']}")
 
@@ -137,8 +135,8 @@ class OpenRouterLLM:
             LLMProviderError: If streaming fails
         """
         try:
-            temperature = kwargs.get('temperature', self.temperature)
-            max_tokens = kwargs.get('max_tokens', self.max_tokens)
+            temperature = kwargs.get("temperature", self.temperature)
+            max_tokens = kwargs.get("max_tokens", self.max_tokens)
 
             logger.debug(f"Streaming completion with model={self.model}")
 
@@ -147,7 +145,7 @@ class OpenRouterLLM:
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                stream=True
+                stream=True,
             )
 
             for chunk in response:

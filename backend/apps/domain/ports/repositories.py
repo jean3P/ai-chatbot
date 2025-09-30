@@ -6,10 +6,10 @@ Repository Ports - Interfaces for data persistence
 These ports define contracts for accessing stored data.
 """
 
-from typing import Protocol, Optional, List
+from typing import List, Optional, Protocol
 from uuid import UUID
 
-from apps.domain.models import Message, Conversation
+from apps.domain.models import Conversation, Message
 
 
 class IMessageRepository(Protocol):
@@ -47,9 +47,7 @@ class IMessageRepository(Protocol):
         ...
 
     def list_by_conversation(
-            self,
-            conversation_id: UUID,
-            limit: Optional[int] = None
+        self, conversation_id: UUID, limit: Optional[int] = None
     ) -> List[Message]:
         """
         Get all messages in a conversation
@@ -111,9 +109,7 @@ class IConversationRepository(Protocol):
         ...
 
     def list_by_session(
-            self,
-            session_id: str,
-            limit: Optional[int] = None
+        self, session_id: str, limit: Optional[int] = None
     ) -> List[Conversation]:
         """
         Get conversations for a session
@@ -128,9 +124,7 @@ class IConversationRepository(Protocol):
         ...
 
     def list_by_user(
-            self,
-            user_id: UUID,
-            limit: Optional[int] = None
+        self, user_id: UUID, limit: Optional[int] = None
     ) -> List[Conversation]:
         """
         Get conversations for a user

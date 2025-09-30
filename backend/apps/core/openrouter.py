@@ -14,17 +14,25 @@ class OpenRouterClient:
     """Client for OpenRouter API with free models"""
 
     def __init__(self):
-        self.base_url: str = getattr(settings, "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
+        self.base_url: str = getattr(
+            settings, "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
+        ).rstrip("/")
         self.api_key: str = getattr(settings, "OPENROUTER_API_KEY", "")
 
         # Use consistent embedding model
-        self.embedding_model: str = getattr(settings, "DEFAULT_EMBEDDING_MODEL", "text-embedding-3-small")
+        self.embedding_model: str = getattr(
+            settings, "DEFAULT_EMBEDDING_MODEL", "text-embedding-3-small"
+        )
         self.llm_model: str = getattr(settings, "DEFAULT_LLM_MODEL", "gpt-4o-mini")
-        self.multilingual_model: str = getattr(settings, "MULTILINGUAL_LLM_MODEL", self.llm_model)
+        self.multilingual_model: str = getattr(
+            settings, "MULTILINGUAL_LLM_MODEL", self.llm_model
+        )
 
         # Local fallback - use same model consistently
         self.local_fallback_model: Optional[str] = getattr(
-            settings, "LOCAL_EMBEDDING_FALLBACK_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+            settings,
+            "LOCAL_EMBEDDING_FALLBACK_MODEL",
+            "sentence-transformers/all-MiniLM-L6-v2",
         )
 
         self.client = openai.OpenAI(
@@ -42,13 +50,17 @@ class OpenRouterClient:
         if not self.embedding_model:
             logger.warning("DEFAULT_EMBEDDING_MODEL is not set!")
 
-    def generate_embeddings(self, texts: List[str], model: str | None = None) -> List[List[float]]:
+    def generate_embeddings(
+        self, texts: List[str], model: str | None = None
+    ) -> List[List[float]]:
         model = model or self.embedding_model
         if not texts:
             return []
         texts = ["" if t is None else str(t) for t in texts]
 
-        logger.info(f"Embeddings: model={model} base_url={self.base_url} batch_size={len(texts)}")
+        logger.info(
+            f"Embeddings: model={model} base_url={self.base_url} batch_size={len(texts)}"
+        )
 
         # If we've determined to use local fallback, go straight there
         if self._use_local_fallback:
@@ -62,8 +74,12 @@ class OpenRouterClient:
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
                 "Accept": "application/json",
-                "HTTP-Referer": getattr(settings, "OPENROUTER_SITE_URL", "http://localhost"),
-                "X-Title": getattr(settings, "OPENROUTER_APP_NAME", "swisson-ai-chatbot"),
+                "HTTP-Referer": getattr(
+                    settings, "OPENROUTER_SITE_URL", "http://localhost"
+                ),
+                "X-Title": getattr(
+                    settings, "OPENROUTER_APP_NAME", "swisson-ai-chatbot"
+                ),
             }
             payload = {"model": model, "input": texts}
 
@@ -76,7 +92,9 @@ class OpenRouterClient:
             )
 
             if 300 <= r.status_code < 400:
-                logger.error(f"OpenRouter redirected (status {r.status_code}) to: {r.headers.get('Location')}")
+                logger.error(
+                    f"OpenRouter redirected (status {r.status_code}) to: {r.headers.get('Location')}"
+                )
                 raise RuntimeError("Embeddings endpoint redirected")
 
             # Check if we got a successful response
@@ -87,10 +105,14 @@ class OpenRouterClient:
                     vectors = self._extract_embeddings_generic(data)
                     if len(vectors) == len(texts):
                         self._current_embedding_model = model
-                        logger.info(f"OpenRouter embeddings successful: {len(vectors)} vectors")
+                        logger.info(
+                            f"OpenRouter embeddings successful: {len(vectors)} vectors"
+                        )
                         return vectors
                     else:
-                        logger.warning(f"Vector count mismatch: expected {len(texts)}, got {len(vectors)}")
+                        logger.warning(
+                            f"Vector count mismatch: expected {len(texts)}, got {len(vectors)}"
+                        )
                 else:
                     logger.error(f"OpenRouter returned non-JSON ({ctype})")
             else:
@@ -116,10 +138,12 @@ class OpenRouterClient:
             from sentence_transformers import SentenceTransformer
 
             # Load or reuse model
-            if not hasattr(self, '_local_model'):
+            if not hasattr(self, "_local_model"):
                 self._local_model = SentenceTransformer(self.local_fallback_model)
 
-            vectors = self._local_model.encode(texts, normalize_embeddings=True).tolist()
+            vectors = self._local_model.encode(
+                texts, normalize_embeddings=True
+            ).tolist()
             self._current_embedding_model = self.local_fallback_model
             logger.info(f"Local embeddings OK: {len(vectors)} vectors")
             return vectors
@@ -173,7 +197,7 @@ class OpenRouterClient:
                 messages=messages,
                 temperature=0.1,
                 max_tokens=max_tokens,
-                stream=stream
+                stream=stream,
             )
             if stream:
                 return self._stream_response(response)

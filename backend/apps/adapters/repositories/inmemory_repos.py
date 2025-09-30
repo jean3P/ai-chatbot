@@ -2,11 +2,11 @@
 """
 In-Memory Repository Adapters for testing
 """
-from typing import Optional, List, Dict
-from uuid import UUID
 from copy import deepcopy
+from typing import Dict, List, Optional
+from uuid import UUID
 
-from apps.domain.models import Message, Conversation
+from apps.domain.models import Conversation, Message
 
 
 class InMemoryMessageRepository:
@@ -27,13 +27,12 @@ class InMemoryMessageRepository:
         return deepcopy(self._messages.get(message_id))
 
     def list_by_conversation(
-            self,
-            conversation_id: UUID,
-            limit: Optional[int] = None
+        self, conversation_id: UUID, limit: Optional[int] = None
     ) -> List[Message]:
         """List messages in conversation"""
         messages = [
-            msg for msg in self._messages.values()
+            msg
+            for msg in self._messages.values()
             if msg.conversation_id == conversation_id
         ]
         messages.sort(key=lambda m: m.created_at)
@@ -73,13 +72,12 @@ class InMemoryConversationRepository:
         return deepcopy(self._conversations.get(conversation_id))
 
     def list_by_session(
-            self,
-            session_id: str,
-            limit: Optional[int] = None
+        self, session_id: str, limit: Optional[int] = None
     ) -> List[Conversation]:
         """List conversations by session"""
         conversations = [
-            conv for conv in self._conversations.values()
+            conv
+            for conv in self._conversations.values()
             if conv.session_id == session_id
         ]
         conversations.sort(key=lambda c: c.updated_at, reverse=True)
@@ -90,14 +88,11 @@ class InMemoryConversationRepository:
         return [deepcopy(conv) for conv in conversations]
 
     def list_by_user(
-            self,
-            user_id: UUID,
-            limit: Optional[int] = None
+        self, user_id: UUID, limit: Optional[int] = None
     ) -> List[Conversation]:
         """List conversations by user"""
         conversations = [
-            conv for conv in self._conversations.values()
-            if conv.user_id == user_id
+            conv for conv in self._conversations.values() if conv.user_id == user_id
         ]
         conversations.sort(key=lambda c: c.updated_at, reverse=True)
 

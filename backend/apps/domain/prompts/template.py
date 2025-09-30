@@ -4,9 +4,10 @@ Prompt Template Manager
 
 Handles loading and rendering versioned prompt templates.
 """
-from typing import List
-from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from pathlib import Path
+from typing import List
+
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 from apps.domain.models import Chunk
 
@@ -39,14 +40,10 @@ class PromptTemplate:
             loader=FileSystemLoader(str(template_dir)),
             autoescape=False,  # Don't escape for LLM input
             trim_blocks=True,
-            lstrip_blocks=True
+            lstrip_blocks=True,
         )
 
-    def render_system(
-            self,
-            context: List[Chunk],
-            language: str = "en"
-    ) -> str:
+    def render_system(self, context: List[Chunk], language: str = "en") -> str:
         """
         Render system prompt with context
 
@@ -68,7 +65,7 @@ class PromptTemplate:
         return template.render(
             context=context,
             language=language,
-            language_name=self._get_language_name(language)
+            language_name=self._get_language_name(language),
         )
 
     def _get_language_name(self, code: str) -> str:
@@ -81,10 +78,5 @@ class PromptTemplate:
         Returns:
             Full language name
         """
-        names = {
-            'en': 'English',
-            'de': 'German',
-            'fr': 'French',
-            'es': 'Spanish'
-        }
-        return names.get(code, 'English')
+        names = {"en": "English", "de": "German", "fr": "French", "es": "Spanish"}
+        return names.get(code, "English")

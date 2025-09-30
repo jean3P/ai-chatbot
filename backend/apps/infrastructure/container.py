@@ -7,8 +7,8 @@ Simple factory functions for creating fully-wired services.
 No magic, no framework - just explicit construction.
 """
 
-from typing import Dict, Any, Optional
 import logging
+from typing import Any, Dict, Optional
 
 from apps.domain.models import DomainException
 from apps.infrastructure.config import get_config
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # ADAPTER FACTORIES
 # ============================================================
+
 
 def create_llm_provider(config: Dict[str, Any]):
     """
@@ -33,25 +34,26 @@ def create_llm_provider(config: Dict[str, Any]):
     Raises:
         ValueError: If provider type is unknown
     """
-    provider_type = config.get('type', 'fake')
+    provider_type = config.get("type", "fake")
 
-    if provider_type == 'fake':
+    if provider_type == "fake":
         from apps.adapters.llm.fake import FakeLLM
-        return FakeLLM(response=config.get('response', 'Test response'))
 
-    elif provider_type == 'openrouter':
+        return FakeLLM(response=config.get("response", "Test response"))
+
+    elif provider_type == "openrouter":
         from apps.adapters.llm.openrouter import OpenRouterLLM
 
-        api_key = config.get('api_key')
+        api_key = config.get("api_key")
         if not api_key:
             raise ValueError("OpenRouter API key is required")
 
         return OpenRouterLLM(
             api_key=api_key,
-            base_url=config.get('base_url', 'https://openrouter.ai/api/v1'),
-            model=config.get('model', 'gpt-4o-mini'),
-            temperature=config.get('temperature', 0.1),
-            max_tokens=config.get('max_tokens', 1000)
+            base_url=config.get("base_url", "https://openrouter.ai/api/v1"),
+            model=config.get("model", "gpt-4o-mini"),
+            temperature=config.get("temperature", 0.1),
+            max_tokens=config.get("max_tokens", 1000),
         )
 
     else:
@@ -71,17 +73,21 @@ def create_embedding_provider(config: Dict[str, Any]):
     Raises:
         ValueError: If provider type is unknown
     """
-    provider_type = config.get('type', 'fake')
+    provider_type = config.get("type", "fake")
 
-    if provider_type == 'fake':
+    if provider_type == "fake":
         from apps.adapters.embeddings.fake import FakeEmbedding
-        return FakeEmbedding(dimension=config.get('dimension', 384))
 
-    elif provider_type == 'sentence_transformers':
-        from apps.adapters.embeddings.sentence_transformers import SentenceTransformersEmbedding
+        return FakeEmbedding(dimension=config.get("dimension", 384))
+
+    elif provider_type == "sentence_transformers":
+        from apps.adapters.embeddings.sentence_transformers import (
+            SentenceTransformersEmbedding,
+        )
+
         return SentenceTransformersEmbedding(
-            model_name=config.get('model', 'all-MiniLM-L6-v2'),
-            device=config.get('device', 'cpu')
+            model_name=config.get("model", "all-MiniLM-L6-v2"),
+            device=config.get("device", "cpu"),
         )
 
     else:
@@ -92,25 +98,28 @@ def create_vector_store(config: Dict[str, Any]):
     """
     Factory for vector store based on configuration
     """
-    store_type = config.get('type', 'numpy')
+    store_type = config.get("type", "numpy")
 
-    if store_type == 'numpy':
+    if store_type == "numpy":
         from apps.adapters.retrieval.numpy_db_store import NumPyDBVectorStore
+
         return NumPyDBVectorStore(auto_load=True)  # Auto-load from database
 
-    elif store_type == 'pgvector':
+    elif store_type == "pgvector":
         from apps.adapters.retrieval.pgvector_store import PgVectorStore
-        return PgVectorStore(dimension=config.get('dimension', 384))
 
-    elif store_type == 'fake':
+        return PgVectorStore(dimension=config.get("dimension", 384))
+
+    elif store_type == "fake":
         from apps.adapters.retrieval.fake import FakeVectorStore
+
         return FakeVectorStore()
 
     else:
         raise ValueError(f"Unknown vector store type: {store_type}")
 
 
-def create_document_parser(file_type: str = 'pdf'):
+def create_document_parser(file_type: str = "pdf"):
     """
     Factory for document parser based on file type
 
@@ -123,12 +132,14 @@ def create_document_parser(file_type: str = 'pdf'):
     Raises:
         ValueError: If file type is not supported
     """
-    if file_type == 'pdf':
+    if file_type == "pdf":
         from apps.adapters.parsing.pymupdf_parser import PyMuPDFParser
+
         return PyMuPDFParser()
 
-    elif file_type == 'fake':
+    elif file_type == "fake":
         from apps.adapters.parsing.fake import FakeParser
+
         return FakeParser()
 
     else:
@@ -147,9 +158,11 @@ def create_message_repository(use_inmemory: bool = False):
     """
     if use_inmemory:
         from apps.adapters.repositories.inmemory_repos import InMemoryMessageRepository
+
         return InMemoryMessageRepository()
     else:
         from apps.adapters.repositories.django_repos import DjangoMessageRepository
+
         return DjangoMessageRepository()
 
 
@@ -164,10 +177,14 @@ def create_conversation_repository(use_inmemory: bool = False):
         Implementation of IConversationRepository
     """
     if use_inmemory:
-        from apps.adapters.repositories.inmemory_repos import InMemoryConversationRepository
+        from apps.adapters.repositories.inmemory_repos import (
+            InMemoryConversationRepository,
+        )
+
         return InMemoryConversationRepository()
     else:
         from apps.adapters.repositories.django_repos import DjangoConversationRepository
+
         return DjangoConversationRepository()
 
 
@@ -175,7 +192,8 @@ def create_conversation_repository(use_inmemory: bool = False):
 # STRATEGY FACTORIES
 # ============================================================
 
-def create_rag_strategy(config: Dict[str, Any], method: str = 'baseline'):
+
+def create_rag_strategy(config: Dict[str, Any], method: str = "baseline"):
     """
     Factory for RAG strategy
 
@@ -189,30 +207,28 @@ def create_rag_strategy(config: Dict[str, Any], method: str = 'baseline'):
     Raises:
         ValueError: If method is unknown
     """
-    if method == 'baseline':
-        from apps.domain.strategies.baseline import BaselineStrategy
+    if method == "baseline":
         from apps.domain.prompts.template import PromptTemplate
+        from apps.domain.strategies.baseline import BaselineStrategy
 
         # Create dependencies
-        llm = create_llm_provider(config['llm'])
-        embedder = create_embedding_provider(config['embedding'])
-        retriever = create_vector_store(config['retriever'])
+        llm = create_llm_provider(config["llm"])
+        embedder = create_embedding_provider(config["embedding"])
+        retriever = create_vector_store(config["retriever"])
 
         # Create prompt template
-        prompt_template = PromptTemplate(
-            version=config.get('prompt_version', 'v1.0')
-        )
+        prompt_template = PromptTemplate(version=config.get("prompt_version", "v1.0"))
 
         # Create strategy with configuration
-        retrieval_config = config.get('retrieval', {})
+        retrieval_config = config.get("retrieval", {})
 
         return BaselineStrategy(
             retriever=retriever,
             llm=llm,
             embedder=embedder,
             prompt_template=prompt_template,
-            top_k=retrieval_config.get('top_k', 10),
-            similarity_threshold=retrieval_config.get('threshold', 0.3)
+            top_k=retrieval_config.get("top_k", 10),
+            similarity_threshold=retrieval_config.get("threshold", 0.3),
         )
 
     # Future strategies
@@ -228,7 +244,10 @@ def create_rag_strategy(config: Dict[str, Any], method: str = 'baseline'):
 # SERVICE FACTORIES
 # ============================================================
 
-def create_chat_service(config: Optional[Dict] = None, use_inmemory_repos: bool = False):
+
+def create_chat_service(
+    config: Optional[Dict] = None, use_inmemory_repos: bool = False
+):
     """
     Create fully-wired ChatService with all dependencies
 
@@ -257,8 +276,7 @@ def create_chat_service(config: Optional[Dict] = None, use_inmemory_repos: bool 
 
         # Create RAG strategy
         strategy = create_rag_strategy(
-            config=config,
-            method=config.get('strategy_method', 'baseline')
+            config=config, method=config.get("strategy_method", "baseline")
         )
 
         # Create repositories
@@ -267,10 +285,9 @@ def create_chat_service(config: Optional[Dict] = None, use_inmemory_repos: bool 
 
         # Wire service
         from apps.domain.services.chat_service import ChatService
+
         service = ChatService(
-            rag_strategy=strategy,
-            message_repo=msg_repo,
-            conversation_repo=conv_repo
+            rag_strategy=strategy, message_repo=msg_repo, conversation_repo=conv_repo
         )
 
         logger.info(
@@ -335,6 +352,7 @@ def create_evaluation_service(config: Optional[Dict] = None):
 # VALIDATION
 # ============================================================
 
+
 def validate_config(config: Dict[str, Any]) -> bool:
     """
     Validate configuration structure
@@ -348,27 +366,27 @@ def validate_config(config: Dict[str, Any]) -> bool:
     Raises:
         ValueError: If configuration is invalid
     """
-    required_keys = ['llm', 'embedding', 'retriever']
+    required_keys = ["llm", "embedding", "retriever"]
 
     for key in required_keys:
         if key not in config:
             raise ValueError(f"Missing required config key: {key}")
 
     # Validate LLM config
-    if 'type' not in config['llm']:
+    if "type" not in config["llm"]:
         raise ValueError("LLM config missing 'type' key")
 
     # Validate embedding config
-    if 'type' not in config['embedding']:
+    if "type" not in config["embedding"]:
         raise ValueError("Embedding config missing 'type' key")
 
     # Validate retriever config
-    if 'type' not in config['retriever']:
+    if "type" not in config["retriever"]:
         raise ValueError("Retriever config missing 'type' key")
 
     # Validate embedding dimension consistency
-    if config['retriever']['type'] == 'pgvector':
-        if 'dimension' not in config['retriever']:
+    if config["retriever"]["type"] == "pgvector":
+        if "dimension" not in config["retriever"]:
             raise ValueError("PgVector config requires 'dimension' key")
 
     return True
@@ -377,6 +395,7 @@ def validate_config(config: Dict[str, Any]) -> bool:
 # ============================================================
 # HELPER FUNCTIONS
 # ============================================================
+
 
 def get_service_info(config: Optional[Dict] = None) -> Dict[str, Any]:
     """
@@ -391,21 +410,21 @@ def get_service_info(config: Optional[Dict] = None) -> Dict[str, Any]:
     config = config or get_config()
 
     return {
-        'environment': config.get('environment', 'unknown'),
-        'llm': {
-            'type': config['llm'].get('type'),
-            'model': config['llm'].get('model', 'N/A'),
+        "environment": config.get("environment", "unknown"),
+        "llm": {
+            "type": config["llm"].get("type"),
+            "model": config["llm"].get("model", "N/A"),
         },
-        'embedding': {
-            'type': config['embedding'].get('type'),
-            'model': config['embedding'].get('model', 'N/A'),
-            'dimension': config['embedding'].get('dimension', 'N/A'),
+        "embedding": {
+            "type": config["embedding"].get("type"),
+            "model": config["embedding"].get("model", "N/A"),
+            "dimension": config["embedding"].get("dimension", "N/A"),
         },
-        'retriever': {
-            'type': config['retriever'].get('type'),
+        "retriever": {
+            "type": config["retriever"].get("type"),
         },
-        'prompt_version': config.get('prompt_version', 'v1.0'),
-        'strategy_method': config.get('strategy_method', 'baseline')
+        "prompt_version": config.get("prompt_version", "v1.0"),
+        "strategy_method": config.get("strategy_method", "baseline"),
     }
 
 

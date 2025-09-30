@@ -7,7 +7,7 @@ This port defines the contract for LLM providers.
 Any adapter that implements these methods can be used by the domain.
 """
 
-from typing import Protocol, List, Dict, Iterator
+from typing import Dict, Iterator, List, Protocol
 
 
 class ILLMProvider(Protocol):
@@ -56,4 +56,3 @@ class ILLMProvider(Protocol):
             Streaming is optional for Phase 1. Can raise NotImplementedError.
         """
         ...
-

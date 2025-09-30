@@ -3,13 +3,14 @@
 """
 Document processors for extracting text from various file formats
 """
+import logging
 import os
 import re
-import logging
-from typing import List, Dict, Any, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 import fitz  # PyMuPDF
 import pdfplumber
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +21,10 @@ class PDFProcessor:
     def __init__(self):
         self.min_text_length = 50  # Minimum text length to consider valid
         self.section_patterns = [
-            r'^([A-Z][A-Z\s]{2,30})$',  # ALL CAPS headers
-            r'^\d+\.?\s+[A-Z].*',  # Numbered sections (1. Introduction)
-            r'^[A-Z][a-z]+(?:\s[A-Z][a-z]+)*:',  # Title Case: headers
-            r'^\*{1,3}[A-Z].*\*{1,3}$',  # *Bold headers*
+            r"^([A-Z][A-Z\s]{2,30})$",  # ALL CAPS headers
+            r"^\d+\.?\s+[A-Z].*",  # Numbered sections (1. Introduction)
+            r"^[A-Z][a-z]+(?:\s[A-Z][a-z]+)*:",  # Title Case: headers
+            r"^\*{1,3}[A-Z].*\*{1,3}$",  # *Bold headers*
         ]
 
     def extract_text(self, file_path: str) -> Dict[str, Any]:
@@ -65,14 +66,14 @@ class PDFProcessor:
                 sections = self._extract_sections_from_text(page_text)
 
                 page_data = {
-                    'page_number': page_num + 1,
-                    'content': page_text.strip(),
-                    'sections': sections,
-                    'metadata': {
-                        'extraction_method': 'pymupdf',
-                        'char_count': len(page_text),
-                        'block_count': len(blocks.get('blocks', []))
-                    }
+                    "page_number": page_num + 1,
+                    "content": page_text.strip(),
+                    "sections": sections,
+                    "metadata": {
+                        "extraction_method": "pymupdf",
+                        "char_count": len(page_text),
+                        "block_count": len(blocks.get("blocks", [])),
+                    },
                 }
 
                 if len(page_text.strip()) >= self.min_text_length:
@@ -82,10 +83,10 @@ class PDFProcessor:
             doc.close()
 
         return {
-            'pages': pages_data,
-            'page_count': len(pages_data),
-            'total_chars': sum(len(p['content']) for p in pages_data),
-            'extraction_method': 'pymupdf'
+            "pages": pages_data,
+            "page_count": len(pages_data),
+            "total_chars": sum(len(p["content"]) for p in pages_data),
+            "extraction_method": "pymupdf",
         }
 
     def _extract_with_pdfplumber(self, file_path: str) -> Dict[str, Any]:
@@ -114,23 +115,23 @@ class PDFProcessor:
                 sections = self._extract_sections_from_text(combined_text)
 
                 page_data = {
-                    'page_number': page_num + 1,
-                    'content': combined_text.strip(),
-                    'sections': sections,
-                    'metadata': {
-                        'extraction_method': 'pdfplumber',
-                        'char_count': len(combined_text),
-                        'table_count': len(tables)
-                    }
+                    "page_number": page_num + 1,
+                    "content": combined_text.strip(),
+                    "sections": sections,
+                    "metadata": {
+                        "extraction_method": "pdfplumber",
+                        "char_count": len(combined_text),
+                        "table_count": len(tables),
+                    },
                 }
 
                 pages_data.append(page_data)
 
         return {
-            'pages': pages_data,
-            'page_count': len(pages_data),
-            'total_chars': sum(len(p['content']) for p in pages_data),
-            'extraction_method': 'pdfplumber'
+            "pages": pages_data,
+            "page_count": len(pages_data),
+            "total_chars": sum(len(p["content"]) for p in pages_data),
+            "extraction_method": "pdfplumber",
         }
 
     def _extract_sections_from_text(self, text: str) -> List[Dict[str, str]]:
@@ -138,9 +139,9 @@ class PDFProcessor:
         if not text:
             return []
 
-        lines = text.split('\n')
+        lines = text.split("\n")
         sections = []
-        current_section = {'title': '', 'content': ''}
+        current_section = {"title": "", "content": ""}
 
         for line in lines:
             line = line.strip()
@@ -152,27 +153,24 @@ class PDFProcessor:
 
             if is_header:
                 # Save previous section if it has content
-                if current_section['content']:
+                if current_section["content"]:
                     sections.append(current_section.copy())
 
                 # Start new section
-                current_section = {
-                    'title': line,
-                    'content': ''
-                }
+                current_section = {"title": line, "content": ""}
             else:
                 # Add to current section content
-                if current_section['content']:
-                    current_section['content'] += '\n'
-                current_section['content'] += line
+                if current_section["content"]:
+                    current_section["content"] += "\n"
+                current_section["content"] += line
 
         # Add last section
-        if current_section['content']:
+        if current_section["content"]:
             sections.append(current_section)
 
         # If no sections found, create one section with all content
         if not sections:
-            sections = [{'title': '', 'content': text}]
+            sections = [{"title": "", "content": text}]
 
         return sections
 
@@ -186,10 +184,12 @@ class PDFProcessor:
                 return True
 
         # Additional heuristics
-        if (len(line.split()) <= 6 and  # Short
-                line[0].isupper() and  # Starts with capital
-                not line.endswith('.') and  # Doesn't end with period
-                ':' in line[-3:]):  # Ends with colon
+        if (
+            len(line.split()) <= 6  # Short
+            and line[0].isupper()  # Starts with capital
+            and not line.endswith(".")  # Doesn't end with period
+            and ":" in line[-3:]
+        ):  # Ends with colon
             return True
 
         return False
@@ -207,12 +207,12 @@ class PDFProcessor:
             for row in table:
                 if row:  # Skip empty rows
                     # Clean and join cells
-                    cleaned_cells = [str(cell).strip() if cell else '' for cell in row]
-                    table_lines.append(' | '.join(cleaned_cells))
+                    cleaned_cells = [str(cell).strip() if cell else "" for cell in row]
+                    table_lines.append(" | ".join(cleaned_cells))
 
-            formatted_tables.append('\n'.join(table_lines))
+            formatted_tables.append("\n".join(table_lines))
 
-        return '\n\n'.join(formatted_tables)
+        return "\n\n".join(formatted_tables)
 
     def validate_pdf(self, file_path: str) -> Dict[str, Any]:
         """
@@ -226,28 +226,28 @@ class PDFProcessor:
         """
         try:
             if not os.path.exists(file_path):
-                return {'valid': False, 'error': 'File not found'}
+                return {"valid": False, "error": "File not found"}
 
             file_size = os.path.getsize(file_path)
             if file_size == 0:
-                return {'valid': False, 'error': 'Empty file'}
+                return {"valid": False, "error": "Empty file"}
 
             # Try to open with PyMuPDF
             doc = fitz.open(file_path)
 
             result = {
-                'valid': True,
-                'page_count': len(doc),
-                'file_size': file_size,
-                'is_encrypted': doc.is_encrypted,
-                'metadata': doc.metadata
+                "valid": True,
+                "page_count": len(doc),
+                "file_size": file_size,
+                "is_encrypted": doc.is_encrypted,
+                "metadata": doc.metadata,
             }
 
             doc.close()
             return result
 
         except Exception as e:
-            return {'valid': False, 'error': str(e)}
+            return {"valid": False, "error": str(e)}
 
 
 class TextProcessor:
@@ -256,27 +256,24 @@ class TextProcessor:
     def extract_text(self, file_path: str) -> Dict[str, Any]:
         """Extract text from plain text file"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             # Simple section detection for text files
-            sections = [{'title': '', 'content': content}]
+            sections = [{"title": "", "content": content}]
 
             page_data = {
-                'page_number': 1,
-                'content': content,
-                'sections': sections,
-                'metadata': {
-                    'extraction_method': 'text',
-                    'char_count': len(content)
-                }
+                "page_number": 1,
+                "content": content,
+                "sections": sections,
+                "metadata": {"extraction_method": "text", "char_count": len(content)},
             }
 
             return {
-                'pages': [page_data],
-                'page_count': 1,
-                'total_chars': len(content),
-                'extraction_method': 'text'
+                "pages": [page_data],
+                "page_count": 1,
+                "total_chars": len(content),
+                "extraction_method": "text",
             }
 
         except Exception as e:
@@ -288,11 +285,9 @@ def get_processor_for_file(file_path: str):
     """Get appropriate processor based on file extension"""
     suffix = Path(file_path).suffix.lower()
 
-    if suffix == '.pdf':
+    if suffix == ".pdf":
         return PDFProcessor()
-    elif suffix in ['.txt', '.md']:
+    elif suffix in [".txt", ".md"]:
         return TextProcessor()
     else:
         raise ValueError(f"Unsupported file type: {suffix}")
-
-

@@ -2,15 +2,15 @@
 """
 URL configuration for AI Chatbot backend.
 """
-from django.contrib import admin
-from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import include, path
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/chat/', include('apps.chat.urls')),
-    path('api/documents/', include('apps.documents.urls')),
+    path("admin/", admin.site.urls),
+    path("api/chat/", include("apps.chat.urls")),
+    path("api/documents/", include("apps.documents.urls")),
 ]
 
 # Serve media files in development

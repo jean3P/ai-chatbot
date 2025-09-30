@@ -8,14 +8,15 @@ Entities: Have identity, mutable (e.g., Message, Conversation)
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any
 from datetime import datetime
-from uuid import UUID, uuid4
 from enum import Enum
+from typing import Any, Dict, List, Optional
+from uuid import UUID, uuid4
 
 
 class MessageRole(str, Enum):
     """Message role in conversation"""
+
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
@@ -23,6 +24,7 @@ class MessageRole(str, Enum):
 
 class DocumentType(str, Enum):
     """Document classification"""
+
     MANUAL = "manual"
     DATASHEET = "datasheet"
     FIRMWARE_NOTES = "firmware_notes"
@@ -35,6 +37,7 @@ class DocumentType(str, Enum):
 # VALUE OBJECTS (Immutable)
 # ============================================================
 
+
 @dataclass(frozen=True)
 class Citation:
     """
@@ -43,6 +46,7 @@ class Citation:
     Immutable value object - cannot be changed after creation.
     Two citations with same attributes are considered equal.
     """
+
     document: str
     page: int
     section: Optional[str] = None
@@ -62,6 +66,7 @@ class Source:
 
     Represents a piece of retrieved content with metadata.
     """
+
     chunk_id: UUID
     document_title: str
     document_type: DocumentType
@@ -85,6 +90,7 @@ class Chunk:
 
     Lightweight representation for retrieval results.
     """
+
     content: str
     document: str
     page: int
@@ -100,6 +106,7 @@ class Chunk:
 # ENTITIES (Have Identity, Mutable)
 # ============================================================
 
+
 @dataclass
 class Message:
     """
@@ -107,6 +114,7 @@ class Message:
 
     Entity with identity (id). Can be modified after creation.
     """
+
     id: UUID = field(default_factory=uuid4)
     conversation_id: Optional[UUID] = None
     role: MessageRole = MessageRole.USER
@@ -116,20 +124,22 @@ class Message:
 
     def add_citation(self, citation: Citation) -> None:
         """Add a citation to message metadata"""
-        if 'citations' not in self.metadata:
-            self.metadata['citations'] = []
-        self.metadata['citations'].append({
-            'document': citation.document,
-            'page': citation.page,
-            'section': citation.section,
-            'text': citation.text,
-            'score': citation.score
-        })
+        if "citations" not in self.metadata:
+            self.metadata["citations"] = []
+        self.metadata["citations"].append(
+            {
+                "document": citation.document,
+                "page": citation.page,
+                "section": citation.section,
+                "text": citation.text,
+                "score": citation.score,
+            }
+        )
 
     @property
     def citations(self) -> List[Dict]:
         """Get citations from metadata"""
-        return self.metadata.get('citations', [])
+        return self.metadata.get("citations", [])
 
 
 @dataclass
@@ -139,6 +149,7 @@ class Conversation:
 
     Entity representing a chat session with messages.
     """
+
     id: UUID = field(default_factory=uuid4)
     title: str = ""
     language: str = "en"
@@ -148,13 +159,12 @@ class Conversation:
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
-    def add_message(self, role: MessageRole, content: str, metadata: Dict = None) -> Message:
+    def add_message(
+        self, role: MessageRole, content: str, metadata: Dict = None
+    ) -> Message:
         """Add a message to the conversation"""
         message = Message(
-            conversation_id=self.id,
-            role=role,
-            content=content,
-            metadata=metadata or {}
+            conversation_id=self.id, role=role, content=content, metadata=metadata or {}
         )
         self.messages.append(message)
         self.updated_at = datetime.utcnow()
@@ -173,6 +183,7 @@ class Conversation:
 # RESULT OBJECTS (Return Types)
 # ============================================================
 
+
 @dataclass(frozen=True)
 class Answer:
     """
@@ -180,6 +191,7 @@ class Answer:
 
     Immutable result object containing answer and metadata.
     """
+
     content: str
     citations: List[Citation]
     sources: List[Source]
@@ -198,30 +210,30 @@ class Answer:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization"""
         return {
-            'content': self.content,
-            'citations': [
+            "content": self.content,
+            "citations": [
                 {
-                    'document': c.document,
-                    'page': c.page,
-                    'section': c.section,
-                    'text': c.text,
-                    'score': c.score
+                    "document": c.document,
+                    "page": c.page,
+                    "section": c.section,
+                    "text": c.text,
+                    "score": c.score,
                 }
                 for c in self.citations
             ],
-            'sources': [
+            "sources": [
                 {
-                    'document': s.document_title,
-                    'page': s.page_number,
-                    'section': s.section_title,
-                    'similarity': s.similarity_score,
-                    'preview': s.content_preview()
+                    "document": s.document_title,
+                    "page": s.page_number,
+                    "section": s.section_title,
+                    "similarity": s.similarity_score,
+                    "preview": s.content_preview(),
                 }
                 for s in self.sources
             ],
-            'method': self.method,
-            'context_used': self.context_used,
-            'metadata': self.metadata
+            "method": self.method,
+            "context_used": self.context_used,
+            "metadata": self.metadata,
         }
 
 
@@ -232,6 +244,7 @@ class DocumentContent:
 
     Result of document parsing.
     """
+
     pages: List[Dict[str, Any]]
     page_count: int
     total_chars: int
@@ -246,6 +259,7 @@ class ChunkResult:
 
     Lightweight result for retrieval operations.
     """
+
     chunk_id: UUID
     content: str
     score: float
@@ -256,39 +270,50 @@ class ChunkResult:
 # DOMAIN EXCEPTIONS
 # ============================================================
 
+
 class DomainException(Exception):
     """Base exception for domain layer"""
+
     pass
 
 
 class ValidationError(DomainException):
     """Raised when domain validation fails"""
+
     pass
+
 
 class EmbeddingError(DomainException):
     """Raised when the embedding fails"""
+
     pass
+
 
 class NotFoundError(DomainException):
     """Raised when entity not found"""
+
     pass
 
 
 class InsufficientContextError(DomainException):
     """Raised when retrieval returns insufficient context"""
+
     pass
 
 
 class EmbeddingDimensionMismatchError(DomainException):
     """Raised when embedding dimensions don't match expected"""
+
     pass
 
 
 class LLMProviderError(DomainException):
     """Raised when LLM provider fails"""
+
     pass
 
 
 class RetrieverError(DomainException):
     """Raised when retrieval fails"""
+
     pass

@@ -4,12 +4,17 @@ PgVector Store Adapter
 
 Implements IVectorStore using PostgreSQL with pgvector extension.
 """
-from typing import List, Dict, Optional
-from uuid import UUID
 import logging
+from typing import Dict, List, Optional
+from uuid import UUID
+
 from django.db import connection
 
-from apps.domain.models import ChunkResult, EmbeddingDimensionMismatchError, RetrieverError
+from apps.domain.models import (
+    ChunkResult,
+    EmbeddingDimensionMismatchError,
+    RetrieverError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +41,9 @@ class PgVectorStore:
         """Verify pgvector extension is available"""
         try:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT extversion FROM pg_extension WHERE extname = 'vector'")
+                cursor.execute(
+                    "SELECT extversion FROM pg_extension WHERE extname = 'vector'"
+                )
                 result = cursor.fetchone()
 
                 if not result:
@@ -48,10 +55,10 @@ class PgVectorStore:
             logger.warning(f"Could not verify pgvector extension: {e}")
 
     def search(
-            self,
-            query_embedding: List[float],
-            top_k: int = 10,
-            filters: Optional[Dict] = None
+        self,
+        query_embedding: List[float],
+        top_k: int = 10,
+        filters: Optional[Dict] = None,
     ) -> List[ChunkResult]:
         """
         Search for similar vectors using pgvector
@@ -96,13 +103,13 @@ class PgVectorStore:
 
                 # Add filters if provided
                 if filters:
-                    if 'document_type' in filters:
+                    if "document_type" in filters:
                         base_query += " AND d.document_type = %s"
-                        params.append(filters['document_type'])
+                        params.append(filters["document_type"])
 
-                    if 'language' in filters:
+                    if "language" in filters:
                         base_query += " AND d.language = %s"
-                        params.append(filters['language'])
+                        params.append(filters["language"])
 
                 # Order by similarity and limit
                 base_query += """
@@ -117,18 +124,20 @@ class PgVectorStore:
                 # Build results
                 results = []
                 for row in cursor.fetchall():
-                    results.append(ChunkResult(
-                        chunk_id=row[0],
-                        content=row[1],
-                        score=float(row[2]),
-                        metadata={
-                            'document_title': row[4],
-                            'document_type': row[5],
-                            'page_number': row[6],
-                            'section_title': row[7],
-                            **row[3]  # Include existing metadata
-                        }
-                    ))
+                    results.append(
+                        ChunkResult(
+                            chunk_id=row[0],
+                            content=row[1],
+                            score=float(row[2]),
+                            metadata={
+                                "document_title": row[4],
+                                "document_type": row[5],
+                                "page_number": row[6],
+                                "section_title": row[7],
+                                **row[3],  # Include existing metadata
+                            },
+                        )
+                    )
 
                 logger.info(f"Found {len(results)} results")
                 return results
@@ -138,10 +147,7 @@ class PgVectorStore:
             raise RetrieverError(f"Search failed: {e}")
 
     def add_vectors(
-            self,
-            chunk_ids: List[UUID],
-            embeddings: List[List[float]],
-            metadata: List[Dict]
+        self, chunk_ids: List[UUID], embeddings: List[List[float]], metadata: List[Dict]
     ) -> None:
         """
         Add vectors to pgvector store
@@ -155,7 +161,9 @@ class PgVectorStore:
             RetrieverError: If adding fails
         """
         if len(chunk_ids) != len(embeddings) != len(metadata):
-            raise ValueError("chunk_ids, embeddings, and metadata must have same length")
+            raise ValueError(
+                "chunk_ids, embeddings, and metadata must have same length"
+            )
 
         if not embeddings:
             return
@@ -190,9 +198,7 @@ class PgVectorStore:
 
             if chunks_to_update:
                 DocumentChunk.objects.bulk_update(
-                    chunks_to_update,
-                    ['embedding', 'metadata'],
-                    batch_size=100
+                    chunks_to_update, ["embedding", "metadata"], batch_size=100
                 )
                 logger.info(f"Updated {len(chunks_to_update)} chunks with embeddings")
 
@@ -227,6 +233,7 @@ class PgVectorStore:
         """
         try:
             from apps.documents.models import DocumentChunk
+
             return DocumentChunk.objects.exclude(embedding__isnull=True).count()
 
         except Exception as e:

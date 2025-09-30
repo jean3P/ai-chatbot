@@ -4,7 +4,7 @@ Fake LLM Provider for testing
 
 Provides deterministic responses without API calls.
 """
-from typing import List, Dict, Iterator
+from typing import Dict, Iterator, List
 
 
 class FakeLLM:

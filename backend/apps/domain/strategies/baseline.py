@@ -7,16 +7,22 @@ Simple dense retrieval with basic prompt engineering.
 This is the MVP implementation for Phase 1.
 """
 
-from typing import List, Optional, Dict
-import re
 import logging
+import re
+from typing import Dict, List, Optional
 
 from apps.domain.models import (
-    Message, Answer, Chunk, Citation, Source,
-    InsufficientContextError, MessageRole, DocumentType
+    Answer,
+    Chunk,
+    Citation,
+    DocumentType,
+    InsufficientContextError,
+    Message,
+    MessageRole,
+    Source,
 )
-from apps.domain.ports.llm import ILLMProvider
 from apps.domain.ports.embeddings import IEmbeddingProvider
+from apps.domain.ports.llm import ILLMProvider
 from apps.domain.ports.retriever import IVectorStore
 
 logger = logging.getLogger(__name__)
@@ -34,13 +40,13 @@ class BaselineStrategy:
     """
 
     def __init__(
-            self,
-            retriever: IVectorStore,
-            llm: ILLMProvider,
-            embedder: IEmbeddingProvider,
-            prompt_template: 'PromptTemplate',
-            top_k: int = 10,
-            similarity_threshold: float = 0.3
+        self,
+        retriever: IVectorStore,
+        llm: ILLMProvider,
+        embedder: IEmbeddingProvider,
+        prompt_template: "PromptTemplate",
+        top_k: int = 10,
+        similarity_threshold: float = 0.3,
     ):
         """
         Initialize baseline strategy
@@ -61,10 +67,7 @@ class BaselineStrategy:
         self._similarity_threshold = similarity_threshold
 
     def retrieve(
-            self,
-            query: str,
-            history: List[Message],
-            filters: Optional[Dict] = None
+        self, query: str, history: List[Message], filters: Optional[Dict] = None
     ) -> List[Chunk]:
         """
         Retrieve relevant chunks using dense retrieval
@@ -82,9 +85,7 @@ class BaselineStrategy:
 
         # Search vector store
         results = self._retriever.search(
-            query_embedding=query_embedding,
-            top_k=self._top_k,
-            filters=filters
+            query_embedding=query_embedding, top_k=self._top_k, filters=filters
         )
 
         # Convert to Chunk objects and filter by threshold
@@ -93,22 +94,24 @@ class BaselineStrategy:
             if result.score >= self._similarity_threshold:
                 chunk = Chunk(
                     content=result.content,
-                    document=result.metadata.get('document_title', 'Unknown'),
-                    page=result.metadata.get('page_number', 0),
-                    section=result.metadata.get('section_title', ''),
-                    score=result.score
+                    document=result.metadata.get("document_title", "Unknown"),
+                    page=result.metadata.get("page_number", 0),
+                    section=result.metadata.get("section_title", ""),
+                    score=result.score,
                 )
                 chunks.append(chunk)
 
-        logger.info(f"Retrieved {len(chunks)} chunks with score >= {self._similarity_threshold}")
+        logger.info(
+            f"Retrieved {len(chunks)} chunks with score >= {self._similarity_threshold}"
+        )
         return chunks
 
     def build_prompt(
-            self,
-            query: str,
-            chunks: List[Chunk],
-            history: List[Message],
-            language: str = "en"
+        self,
+        query: str,
+        chunks: List[Chunk],
+        history: List[Message],
+        language: str = "en",
     ) -> List[Dict[str, str]]:
         """
         Build prompt messages for LLM
@@ -126,34 +129,20 @@ class BaselineStrategy:
 
         # System prompt with context
         system_content = self._prompt_template.render_system(
-            context=chunks,
-            language=language
+            context=chunks, language=language
         )
-        messages.append({
-            "role": "system",
-            "content": system_content
-        })
+        messages.append({"role": "system", "content": system_content})
 
         # Add recent conversation history (last 6 messages)
         for msg in history[-6:]:
-            messages.append({
-                "role": msg.role.value,
-                "content": msg.content
-            })
+            messages.append({"role": msg.role.value, "content": msg.content})
 
         # Add current query
-        messages.append({
-            "role": "user",
-            "content": query
-        })
+        messages.append({"role": "user", "content": query})
 
         return messages
 
-    def extract_citations(
-            self,
-            response: str,
-            chunks: List[Chunk]
-    ) -> List[Citation]:
+    def extract_citations(self, response: str, chunks: List[Chunk]) -> List[Citation]:
         """
         Extract citations from response
 
@@ -173,7 +162,7 @@ class BaselineStrategy:
         seen_citations = set()  # Avoid duplicates
 
         # Pattern 1: [Document, Page X]
-        pattern1 = r'\[([^\]]+),\s*Page\s*(\d+)\]'
+        pattern1 = r"\[([^\]]+),\s*Page\s*(\d+)\]"
         matches = re.finditer(pattern1, response, re.IGNORECASE)
 
         for match in matches:
@@ -182,18 +171,22 @@ class BaselineStrategy:
 
             # Find matching chunk
             for chunk in chunks:
-                if (doc_name.lower() in chunk.document.lower() and
-                        chunk.page == page_num):
+                if (
+                    doc_name.lower() in chunk.document.lower()
+                    and chunk.page == page_num
+                ):
 
                     citation_key = (chunk.document, chunk.page)
                     if citation_key not in seen_citations:
-                        citations.append(Citation(
-                            document=chunk.document,
-                            page=chunk.page,
-                            section=chunk.section,
-                            text=chunk.content[:200],
-                            score=chunk.score
-                        ))
+                        citations.append(
+                            Citation(
+                                document=chunk.document,
+                                page=chunk.page,
+                                section=chunk.section,
+                                text=chunk.content[:200],
+                                score=chunk.score,
+                            )
+                        )
                         seen_citations.add(citation_key)
                     break
 
@@ -203,24 +196,26 @@ class BaselineStrategy:
             if chunk.document.lower() in response.lower():
                 citation_key = (chunk.document, chunk.page)
                 if citation_key not in seen_citations:
-                    citations.append(Citation(
-                        document=chunk.document,
-                        page=chunk.page,
-                        section=chunk.section,
-                        text=chunk.content[:200],
-                        score=chunk.score
-                    ))
+                    citations.append(
+                        Citation(
+                            document=chunk.document,
+                            page=chunk.page,
+                            section=chunk.section,
+                            text=chunk.content[:200],
+                            score=chunk.score,
+                        )
+                    )
                     seen_citations.add(citation_key)
 
         logger.info(f"Extracted {len(citations)} citations from response")
         return citations
 
     def generate_answer(
-            self,
-            query: str,
-            history: List[Message],
-            language: str = "en",
-            filters: Optional[Dict] = None
+        self,
+        query: str,
+        history: List[Message],
+        language: str = "en",
+        filters: Optional[Dict] = None,
     ) -> Answer:
         """
         Generate complete answer with RAG
@@ -269,7 +264,7 @@ class BaselineStrategy:
                 page_number=chunk.page,
                 section_title=chunk.section,
                 content=chunk.content,
-                similarity_score=chunk.score
+                similarity_score=chunk.score,
             )
             sources.append(source)
 
@@ -281,11 +276,11 @@ class BaselineStrategy:
             method="baseline",
             context_used=True,
             metadata={
-                'chunks_retrieved': len(chunks),
-                'chunks_used': len(chunks),
-                'top_similarity_score': chunks[0].score if chunks else 0.0,
-                'language': language
-            }
+                "chunks_retrieved": len(chunks),
+                "chunks_used": len(chunks),
+                "top_similarity_score": chunks[0].score if chunks else 0.0,
+                "language": language,
+            },
         )
 
         logger.info(

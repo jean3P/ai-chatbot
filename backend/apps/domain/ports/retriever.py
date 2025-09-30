@@ -6,7 +6,7 @@ Vector Store Port - Interface for similarity search
 This port defines the contract for vector similarity search.
 """
 
-from typing import Protocol, List, Dict, Optional
+from typing import Dict, List, Optional, Protocol
 from uuid import UUID
 
 from apps.domain.models import ChunkResult
@@ -20,10 +20,10 @@ class IVectorStore(Protocol):
     """
 
     def search(
-            self,
-            query_embedding: List[float],
-            top_k: int = 10,
-            filters: Optional[Dict] = None
+        self,
+        query_embedding: List[float],
+        top_k: int = 10,
+        filters: Optional[Dict] = None,
     ) -> List[ChunkResult]:
         """
         Find most similar vectors to query
@@ -49,10 +49,7 @@ class IVectorStore(Protocol):
         ...
 
     def add_vectors(
-            self,
-            chunk_ids: List[UUID],
-            embeddings: List[List[float]],
-            metadata: List[Dict]
+        self, chunk_ids: List[UUID], embeddings: List[List[float]], metadata: List[Dict]
     ) -> None:
         """
         Add vectors to the store

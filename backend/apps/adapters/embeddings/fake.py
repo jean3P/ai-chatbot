@@ -4,8 +4,8 @@ Fake Embedding Provider for testing
 
 Generates deterministic embeddings without computation.
 """
-from typing import List
 import hashlib
+from typing import List
 
 
 class FakeEmbedding:
