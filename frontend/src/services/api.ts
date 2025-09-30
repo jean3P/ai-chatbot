@@ -13,11 +13,10 @@ const API_BASE_URL =
 export const api = axios.create({
     baseURL: API_BASE_URL,
     timeout: 30000,
-    // Fix: cast headers to RawAxiosRequestHeaders (Axios v1 typing)
     headers: { 'Content-Type': 'application/json' } as RawAxiosRequestHeaders,
 })
 
-// Request interceptor (typed for Axios v1)
+// Request interceptor
 api.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
         const method = (config.method ?? '').toUpperCase()
@@ -30,7 +29,7 @@ api.interceptors.request.use(
     }
 )
 
-// Response interceptor (typed for Axios v1)
+// Response interceptor
 api.interceptors.response.use(
     (response: AxiosResponse) => {
         console.log('✅ API Response:', response.status, response.config.url)
@@ -78,10 +77,15 @@ export const chatAPI = {
 
     // Get all conversations
     getConversations: async (sessionId?: string) => {
-        // Fix: only pass params when defined (avoids odd typing of `{}`)
         const response = await api.get('/chat/conversations/', {
             params: sessionId ? { session_id: sessionId } : undefined,
         })
+        return response.data
+    },
+
+    // Delete conversation
+    deleteConversation: async (conversationId: string) => {
+        const response = await api.delete(`/chat/conversations/${conversationId}/`)
         return response.data
     },
 

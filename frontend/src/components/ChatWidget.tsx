@@ -4,6 +4,7 @@ import React, { useState, useRef, useLayoutEffect, useCallback, useEffect } from
 import { chatAPI, ChatRequest } from '../services/api'
 import MarkdownContent from './MarkdownContent'
 import CitationList from './CitationList'
+import ConversationSidebar from './ConversationSidebar'
 
 interface ChatWidgetProps {
     isOpen: boolean
@@ -66,6 +67,7 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
     const [isLoading, setIsLoading] = useState<boolean>(false)
     const [conversationId, setConversationId] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
     const listRef = useRef<HTMLDivElement | null>(null)
     const endRef = useRef<HTMLDivElement | null>(null)
@@ -111,6 +113,41 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
 
     const toggleMode = () => {
         setMode(prev => prev === 'compact' ? 'expanded' : 'compact')
+    }
+
+    const handleNewChat = () => {
+        setConversationId(null)
+        setMessages([
+            {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: "Hello! I'm your AI assistant. How can I help you today?",
+                timestamp: new Date(),
+            },
+        ])
+        setInput('')
+        setError(null)
+    }
+
+    const handleSelectConversation = async (convId: string) => {
+        try {
+            const response = await chatAPI.getConversation(convId)
+            setConversationId(convId)
+
+            // Convert API messages to local format
+            const loadedMessages: Message[] = response.messages.map((msg: any) => ({
+                id: msg.id,
+                role: msg.role,
+                content: msg.content,
+                timestamp: new Date(msg.created_at),
+                citations: msg.citations || [],
+            }))
+
+            setMessages(loadedMessages)
+        } catch (error) {
+            console.error('Failed to load conversation:', error)
+            setError('Failed to load conversation')
+        }
     }
 
     const handleSend = async (): Promise<void> => {
@@ -207,188 +244,210 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
         : 'max-w-[75%]'
 
     return (
-        <div
-            className={`fixed inset-0 ${overlayStyles} flex ${positionStyles} p-4 z-50 transition-colors duration-300`}
-            onClick={(e) => {
-                if (mode === 'compact' && e.target === e.currentTarget) {
-                    onClose()
-                }
-            }}
-        >
-            <div
-                className={`bg-white rounded-lg shadow-2xl ${containerStyles} flex flex-col transition-all duration-300 ease-in-out`}
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b bg-primary-500 text-white rounded-t-lg shrink-0">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xl">🤖</span>
-                        <h3 className="font-semibold">AI Assistant</h3>
-                        {conversationId && (
-                            <span className="text-xs opacity-90">Connected</span>
-                        )}
-                    </div>
+        <>
+            {/* Conversation Sidebar */}
+            <ConversationSidebar
+                isOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
+                currentConversationId={conversationId}
+                onSelectConversation={handleSelectConversation}
+                onNewChat={handleNewChat}
+            />
 
-                    <div className="flex items-center gap-1">
-                        {!isMobile && (
+            {/* Main Chat */}
+            <div
+                className={`fixed inset-0 ${overlayStyles} flex ${positionStyles} p-4 z-50 transition-colors duration-300`}
+                onClick={(e) => {
+                    if (mode === 'compact' && e.target === e.currentTarget) {
+                        onClose()
+                    }
+                }}
+            >
+                <div
+                    className={`bg-white rounded-lg shadow-2xl ${containerStyles} flex flex-col transition-all duration-300 ease-in-out`}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Header */}
+                    <div className="flex items-center justify-between p-4 border-b bg-primary-500 text-white rounded-t-lg shrink-0">
+                        <div className="flex items-center gap-2">
+                            {/* Sidebar Toggle */}
                             <button
-                                onClick={toggleMode}
+                                onClick={() => setIsSidebarOpen(prev => !prev)}  // Changed from setIsSidebarOpen(true)
                                 className="hover:bg-primary-600 p-2 rounded transition-colors"
                                 type="button"
-                                aria-label={mode === 'compact' ? 'Expand chat' : 'Compact chat'}
-                                title={mode === 'compact' ? 'Expand' : 'Compact'}
+                                aria-label="Toggle conversation history"
+                                title="Conversation History"
                             >
-                                {mode === 'compact' ? (
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                                    </svg>
-                                ) : (
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
-                                    </svg>
-                                )}
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
                             </button>
-                        )}
 
-                        <button
-                            onClick={onClose}
-                            className="hover:bg-primary-600 p-2 rounded transition-colors"
-                            type="button"
-                            aria-label="Close chat"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Error Banner */}
-                {error && (
-                    <div className="bg-red-50 border-l-4 border-primary-500 text-red-900 p-3 text-sm flex items-start justify-between shrink-0">
-                        <div className="flex items-start gap-2">
-                            <span className="text-primary-500 font-bold">⚠️</span>
-                            <span>{error}</span>
+                            <span className="text-xl">🤖</span>
+                            <h3 className="font-semibold">AI Assistant</h3>
+                            {conversationId && (
+                                <span className="text-xs opacity-90">Connected</span>
+                            )}
                         </div>
-                        <button
-                            onClick={clearError}
-                            className="text-primary-500 hover:text-primary-700 font-bold ml-2"
-                            type="button"
-                            aria-label="Dismiss error"
-                        >
-                            ✕
-                        </button>
-                    </div>
-                )}
 
-                {/* Messages */}
-                <div
-                    ref={listRef}
-                    className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
-                    aria-live="polite"
-                    aria-relevant="additions"
-                >
-                    {messages.map((message) => (
-                        <div
-                            key={message.id}
-                            className={`flex ${
-                                message.role === 'user' ? 'justify-end' : 'justify-start'
-                            }`}
-                        >
-                            <div
-                                className={`${messageMaxWidth} rounded-lg px-4 py-3 ${
-                                    message.role === 'user'
-                                        ? 'bg-primary-500 text-white'
-                                        : 'bg-gray-100 text-gray-900'
-                                }`}
+                        <div className="flex items-center gap-1">
+                            {!isMobile && (
+                                <button
+                                    onClick={toggleMode}
+                                    className="hover:bg-primary-600 p-2 rounded transition-colors"
+                                    type="button"
+                                    aria-label={mode === 'compact' ? 'Expand chat' : 'Compact chat'}
+                                    title={mode === 'compact' ? 'Expand' : 'Compact'}
+                                >
+                                    {mode === 'compact' ? (
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                                        </svg>
+                                    )}
+                                </button>
+                            )}
+
+                            <button
+                                onClick={onClose}
+                                className="hover:bg-primary-600 p-2 rounded transition-colors"
+                                type="button"
+                                aria-label="Close chat"
                             >
-                                {/* Message Content */}
-                                {message.role === 'assistant' ? (
-                                    <div className="text-sm">
-                                        <MarkdownContent content={message.content} />
-                                    </div>
-                                ) : (
-                                    <p className="text-sm whitespace-pre-wrap break-words">
-                                        {message.content}
-                                    </p>
-                                )}
-
-                                {/* Citations */}
-                                {message.role === 'assistant' && message.citations && message.citations.length > 0 && (
-                                    <CitationList citations={message.citations} />
-                                )}
-
-                                {/* Timestamp */}
-                                <div className="text-xs opacity-75 mt-2">
-                                    {message.timestamp.toLocaleTimeString()}
-                                </div>
-                            </div>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
-                    ))}
+                    </div>
 
-                    {/* Loading indicator */}
-                    {isLoading && (
-                        <div className="flex justify-start">
-                            <div className="bg-gray-100 rounded-lg px-4 py-3">
-                                <div className="flex gap-2 items-center">
-                                    <div className="flex gap-1">
-                                        <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" />
-                                        <div
-                                            className="w-2 h-2 bg-primary-500 rounded-full animate-bounce"
-                                            style={{ animationDelay: '0.1s' }}
-                                        />
-                                        <div
-                                            className="w-2 h-2 bg-primary-500 rounded-full animate-bounce"
-                                            style={{ animationDelay: '0.2s' }}
-                                        />
-                                    </div>
-                                    <span className="text-xs text-gray-600 ml-2">
-                                        AI is thinking...
-                                    </span>
-                                </div>
+                    {/* Error Banner */}
+                    {error && (
+                        <div className="bg-red-50 border-l-4 border-primary-500 text-red-900 p-3 text-sm flex items-start justify-between shrink-0">
+                            <div className="flex items-start gap-2">
+                                <span className="text-primary-500 font-bold">⚠️</span>
+                                <span>{error}</span>
                             </div>
+                            <button
+                                onClick={clearError}
+                                className="text-primary-500 hover:text-primary-700 font-bold ml-2"
+                                type="button"
+                                aria-label="Dismiss error"
+                            >
+                                ✕
+                            </button>
                         </div>
                     )}
 
-                    <div ref={endRef} />
-                </div>
+                    {/* Messages */}
+                    <div
+                        ref={listRef}
+                        className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
+                        aria-live="polite"
+                        aria-relevant="additions"
+                    >
+                        {messages.map((message) => (
+                            <div
+                                key={message.id}
+                                className={`flex ${
+                                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                                }`}
+                            >
+                                <div
+                                    className={`${messageMaxWidth} rounded-lg px-4 py-3 ${
+                                        message.role === 'user'
+                                            ? 'bg-primary-500 text-white'
+                                            : 'bg-gray-100 text-gray-900'
+                                    }`}
+                                >
+                                    {message.role === 'assistant' ? (
+                                        <div className="text-sm">
+                                            <MarkdownContent content={message.content} />
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm whitespace-pre-wrap break-words">
+                                            {message.content}
+                                        </p>
+                                    )}
 
-                {/* Input */}
-                <div className="p-4 border-t bg-gray-50 shrink-0">
-                    <div className="flex gap-2">
-                        <textarea
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder="Type your question..."
-                            className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                            rows={mode === 'expanded' ? 3 : 2}
-                            disabled={isLoading}
-                            aria-label="Message input"
-                        />
-                        <button
-                            onClick={handleSend}
-                            disabled={!input.trim() || isLoading}
-                            className="bg-primary-500 hover:bg-primary-600 active:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors font-medium self-end"
-                            type="button"
-                            aria-label="Send message"
-                        >
-                            {isLoading ? '⏳' : '📤'}
-                        </button>
+                                    {message.role === 'assistant' && message.citations && message.citations.length > 0 && (
+                                        <CitationList citations={message.citations} />
+                                    )}
+
+                                    <div className="text-xs opacity-75 mt-2">
+                                        {message.timestamp.toLocaleTimeString()}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+
+                        {isLoading && (
+                            <div className="flex justify-start">
+                                <div className="bg-gray-100 rounded-lg px-4 py-3">
+                                    <div className="flex gap-2 items-center">
+                                        <div className="flex gap-1">
+                                            <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" />
+                                            <div
+                                                className="w-2 h-2 bg-primary-500 rounded-full animate-bounce"
+                                                style={{ animationDelay: '0.1s' }}
+                                            />
+                                            <div
+                                                className="w-2 h-2 bg-primary-500 rounded-full animate-bounce"
+                                                style={{ animationDelay: '0.2s' }}
+                                            />
+                                        </div>
+                                        <span className="text-xs text-gray-600 ml-2">
+                                            AI is thinking...
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div ref={endRef} />
                     </div>
 
-                    <div className="text-xs text-gray-500 mt-2 flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${conversationId ? 'bg-green-500' : 'bg-gray-400'}`} />
-                            <span>{conversationId ? 'Connected' : 'Ready'}</span>
-                            {mode === 'expanded' && (
-                                <span className="text-gray-400">• {messages.length} messages</span>
-                            )}
+                    {/* Input */}
+                    <div className="p-4 border-t bg-gray-50 shrink-0">
+                        <div className="flex gap-2">
+                            <textarea
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder="Type your question..."
+                                className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                                rows={mode === 'expanded' ? 3 : 2}
+                                disabled={isLoading}
+                                aria-label="Message input"
+                            />
+                            <button
+                                onClick={handleSend}
+                                disabled={!input.trim() || isLoading}
+                                className="bg-primary-500 hover:bg-primary-600 active:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors font-medium self-end"
+                                type="button"
+                                aria-label="Send message"
+                            >
+                                {isLoading ? '⏳' : '📤'}
+                            </button>
                         </div>
-                        <span className="text-gray-400">localhost:8000</span>
+
+                        <div className="text-xs text-gray-500 mt-2 flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${conversationId ? 'bg-green-500' : 'bg-gray-400'}`} />
+                                <span>{conversationId ? 'Connected' : 'Ready'}</span>
+                                {mode === 'expanded' && (
+                                    <span className="text-gray-400">• {messages.length} messages</span>
+                                )}
+                            </div>
+                            <span className="text-gray-400">localhost:8000</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     )
 }
+
