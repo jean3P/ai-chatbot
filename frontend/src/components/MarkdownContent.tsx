@@ -13,20 +13,20 @@ interface MarkdownContentProps {
 
 export default function MarkdownContent({ content, className = '' }: MarkdownContentProps) {
     const components: Components = {
-        // Headings
+        /* Headings */
         h1: ({ children }) => <h1 className="text-2xl font-bold text-primary-500 mt-4 mb-2">{children}</h1>,
         h2: ({ children }) => <h2 className="text-xl font-bold text-primary-500 mt-3 mb-2">{children}</h2>,
         h3: ({ children }) => <h3 className="text-lg font-semibold text-primary-600 mt-3 mb-1">{children}</h3>,
         h4: ({ children }) => <h4 className="text-base font-semibold text-primary-600 mt-2 mb-1">{children}</h4>,
 
-        // Paragraphs
+        /* Paragraphs */
         p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
 
-        // Bold / Italic
+        /* Emphasis */
         strong: ({ children }) => <strong className="font-bold text-gray-900">{children}</strong>,
         em: ({ children }) => <em className="italic text-gray-700">{children}</em>,
 
-        // Code (inline & blocks)
+        /* Code (inline & blocks) */
         code: ({ inline, className: cls, children, ...props }: any) => {
             const match = /language-(\w+)/.exec(cls || '')
             const language = match ? match[1] : ''
@@ -63,7 +63,7 @@ export default function MarkdownContent({ content, className = '' }: MarkdownCon
             )
         },
 
-        // Links (open in new tab)
+        /* Links (open in new tab, safe) */
         a: ({ href, children, ...props }: any) => (
             <a
                 href={href}
@@ -77,22 +77,22 @@ export default function MarkdownContent({ content, className = '' }: MarkdownCon
             </a>
         ),
 
-        // Lists
+        /* Lists */
         ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1 ml-2">{children}</ul>,
         ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1 ml-2">{children}</ol>,
         li: ({ children }) => <li className="leading-relaxed">{children}</li>,
 
-        // Blockquote
+        /* Blockquote */
         blockquote: ({ children }) => (
             <blockquote className="border-l-4 border-primary-500 pl-4 py-2 my-3 bg-gray-50 italic text-gray-700">
                 {children}
             </blockquote>
         ),
 
-        // HR
+        /* HR */
         hr: () => <hr className="my-4 border-t-2 border-gray-200" />,
 
-        // Tables
+        /* Tables */
         table: ({ children }) => (
             <div className="overflow-x-auto my-3">
                 <table className="min-w-full border border-gray-300 text-sm">{children}</table>
@@ -106,15 +106,17 @@ export default function MarkdownContent({ content, className = '' }: MarkdownCon
         ),
         td: ({ children }) => <td className="px-4 py-2 border-b border-gray-200">{children}</td>,
 
-        // GFM task list checkboxes (read-only)
+        /* GFM task list checkboxes (read-only) */
         input: ({ checked, ...props }: any) => (
             <input type="checkbox" checked={!!checked} disabled className="mr-2 accent-primary-500" {...props} />
         ),
     }
 
     return (
-        <ReactMarkdown remarkPlugins={[remarkGfm]} className={`markdown-content ${className}`} components={components}>
-            {content}
-        </ReactMarkdown>
+        <div className={className}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+                {content}
+            </ReactMarkdown>
+        </div>
     )
 }

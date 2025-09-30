@@ -1,7 +1,8 @@
 // frontend/src/components/ChatWidget.tsx
 
-import React, { useState, useRef, useLayoutEffect, useCallback } from 'react'
+import React, { useState, useRef, useLayoutEffect, useCallback, useEffect } from 'react'
 import { chatAPI, ChatRequest } from '../services/api'
+import MarkdownContent from './MarkdownContent'
 
 interface ChatWidgetProps {
     isOpen: boolean
@@ -16,7 +17,15 @@ interface Message {
     citations?: any[]
 }
 
+type ChatMode = 'compact' | 'expanded'
+
 export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
+    // Chat mode state with localStorage persistence
+    const [mode, setMode] = useState<ChatMode>(() => {
+        const saved = localStorage.getItem('chatMode')
+        return (saved === 'expanded' || saved === 'compact') ? saved : 'compact'
+    })
+
     const [messages, setMessages] = useState<Message[]>([
         {
             id: '1',
@@ -31,9 +40,23 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
     const [conversationId, setConversationId] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
 
-    // ----- Auto-scroll setup -----
     const listRef = useRef<HTMLDivElement | null>(null)
     const endRef = useRef<HTMLDivElement | null>(null)
+
+    // Check if mobile device
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 640
+
+    // Force expanded mode on mobile
+    useEffect(() => {
+        if (isMobile && mode === 'compact') {
+            setMode('expanded')
+        }
+    }, [isMobile, mode])
+
+    // Save mode preference to localStorage
+    useEffect(() => {
+        localStorage.setItem('chatMode', mode)
+    }, [mode])
 
     const scrollToBottom = useCallback((smooth = true) => {
         if (endRef.current) {
@@ -54,7 +77,10 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
         scrollToBottom(true)
     }, [messages, isLoading, scrollToBottom])
 
-    // ----- Actions -----
+    const toggleMode = () => {
+        setMode(prev => prev === 'compact' ? 'expanded' : 'compact')
+    }
+
     const handleSend = async (): Promise<void> => {
         if (!input.trim() || isLoading) return
 
@@ -132,10 +158,27 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
 
     if (!isOpen) return null
 
+    // Dynamic styles based on mode
+    const containerStyles = mode === 'compact'
+        ? 'w-full max-w-md h-[600px]'  // Compact: 400px width, 600px height
+        : 'w-[90vw] h-[90vh] max-w-6xl' // Expanded: 90% viewport
+
+    const overlayStyles = mode === 'compact'
+        ? 'bg-black/50'
+        : 'bg-black/70' // Darker overlay in expanded mode
+
+    const positionStyles = mode === 'compact'
+        ? 'items-end justify-end'  // Bottom-right corner
+        : 'items-center justify-center' // Centered
+
+    const messageMaxWidth = mode === 'compact'
+        ? 'max-w-[85%]'
+        : 'max-w-[75%]' // Wider messages in expanded mode
+
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-end p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md h-[600px] flex flex-col">
-                {/* Header - Updated with Swisson red */}
+        <div className={`fixed inset-0 ${overlayStyles} flex ${positionStyles} p-4 z-50 transition-all duration-300`}>
+            <div className={`bg-white rounded-lg shadow-xl ${containerStyles} flex flex-col transition-all duration-300 ease-in-out`}>
+                {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b bg-primary-500 text-white rounded-t-lg">
                     <div className="flex items-center gap-2">
                         <span className="text-xl">🤖</span>
@@ -144,14 +187,41 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                             <span className="text-xs opacity-90">Connected</span>
                         )}
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="hover:bg-primary-600 p-1 rounded text-xl transition-colors"
-                        type="button"
-                        aria-label="Close chat"
-                    >
-                        ✕
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                        {/* Mode toggle button (hide on mobile) */}
+                        {!isMobile && (
+                            <button
+                                onClick={toggleMode}
+                                className="hover:bg-primary-600 p-2 rounded transition-colors"
+                                type="button"
+                                aria-label={mode === 'compact' ? 'Expand chat' : 'Compact chat'}
+                                title={mode === 'compact' ? 'Expand' : 'Compact'}
+                            >
+                                {mode === 'compact' ? (
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                                    </svg>
+                                ) : (
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                                    </svg>
+                                )}
+                            </button>
+                        )}
+
+                        {/* Close button */}
+                        <button
+                            onClick={onClose}
+                            className="hover:bg-primary-600 p-2 rounded transition-colors"
+                            type="button"
+                            aria-label="Close chat"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Error Banner */}
@@ -187,23 +257,40 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                             }`}
                         >
                             <div
-                                className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                                className={`${messageMaxWidth} rounded-lg px-4 py-3 ${
                                     message.role === 'user'
                                         ? 'bg-primary-500 text-white'
                                         : 'bg-gray-100 text-gray-900'
                                 }`}
                             >
-                                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                {/* Message Content */}
+                                {message.role === 'assistant' ? (
+                                    <div className="text-sm">
+                                        <MarkdownContent content={message.content} />
+                                    </div>
+                                ) : (
+                                    <p className="text-sm whitespace-pre-wrap">
+                                        {message.content}
+                                    </p>
+                                )}
 
+                                {/* Citations */}
                                 {message.citations && message.citations.length > 0 && (
-                                    <div className="mt-2 pt-2 border-t border-white/20 text-xs opacity-90">
-                                        📚 {message.citations.length} source{message.citations.length > 1 ? 's' : ''}
+                                    <div className="mt-3 pt-3 border-t border-gray-300">
+                                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                                            <span className="font-semibold">📚 Sources:</span>
+                                            <span>
+                                                {message.citations.length} reference
+                                                {message.citations.length > 1 ? 's' : ''}
+                                            </span>
+                                        </div>
                                     </div>
                                 )}
 
-                                <span className="text-xs opacity-75 mt-1 block">
+                                {/* Timestamp */}
+                                <div className="text-xs opacity-75 mt-2">
                                     {message.timestamp.toLocaleTimeString()}
-                                </span>
+                                </div>
                             </div>
                         </div>
                     ))}
@@ -232,7 +319,6 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                         </div>
                     )}
 
-                    {/* Sentinel for auto-scroll */}
                     <div ref={endRef} />
                 </div>
 
@@ -245,7 +331,7 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                             onKeyDown={handleKeyDown}
                             placeholder="Type your question..."
                             className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                            rows={2}
+                            rows={mode === 'expanded' ? 3 : 2}
                             disabled={isLoading}
                             aria-label="Message input"
                         />
@@ -260,11 +346,14 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                         </button>
                     </div>
 
-                    {/* Connection Status */}
+                    {/* Status bar */}
                     <div className="text-xs text-gray-500 mt-2 flex justify-between items-center">
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${conversationId ? 'bg-green-500' : 'bg-gray-400'}`} />
                             <span>{conversationId ? 'Connected' : 'Ready'}</span>
+                            {mode === 'expanded' && (
+                                <span className="text-gray-400">• {messages.length} messages</span>
+                            )}
                         </div>
                         <span className="text-gray-400">localhost:8000</span>
                     </div>
