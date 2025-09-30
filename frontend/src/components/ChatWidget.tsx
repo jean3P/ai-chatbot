@@ -3,6 +3,7 @@
 import React, { useState, useRef, useLayoutEffect, useCallback, useEffect } from 'react'
 import { chatAPI, ChatRequest } from '../services/api'
 import MarkdownContent from './MarkdownContent'
+import CitationList from './CitationList'
 
 interface ChatWidgetProps {
     isOpen: boolean
@@ -20,10 +21,14 @@ interface Message {
 type ChatMode = 'compact' | 'expanded'
 
 export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
-    // Chat mode state with localStorage persistence
     const [mode, setMode] = useState<ChatMode>(() => {
-        const saved = localStorage.getItem('chatMode')
-        return (saved === 'expanded' || saved === 'compact') ? saved : 'compact'
+        try {
+            const saved = localStorage.getItem('chatMode')
+            return (saved === 'expanded' || saved === 'compact') ? saved : 'compact'
+        } catch (e) {
+            console.warn('Could not access localStorage:', e)
+            return 'compact'
+        }
     })
 
     const [messages, setMessages] = useState<Message[]>([
@@ -33,6 +38,28 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
             content:
                 "Hello! I'm your AI assistant. I can help you with questions about documentation. What would you like to know?",
             timestamp: new Date(),
+            citations: [
+                {
+                    document_title: 'DMX Splitter XPD-42 Manual',
+                    page_number: 12,
+                    chunk_text: 'Connect the DMX input cable from your controller to the INPUT port on the splitter. Ensure the cable is securely fastened and the connection LED illuminates green.'
+                },
+                {
+                    document_title: 'Installation Guide',
+                    page_number: 5,
+                    chunk_text: 'Before powering on the device, verify all connections are secure.'
+                },
+                {
+                    document_title: 'Troubleshooting FAQ',
+                    page_number: 8,
+                    chunk_text: 'If the LED does not illuminate, check the power supply connection and ensure the voltage matches the device specifications.'
+                },
+                {
+                    document_title: 'Advanced Configuration',
+                    page_number: 15,
+                    chunk_text: 'For optimal performance, configure the termination resistor.'
+                }
+            ]
         },
     ])
     const [input, setInput] = useState<string>('')
@@ -43,19 +70,22 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
     const listRef = useRef<HTMLDivElement | null>(null)
     const endRef = useRef<HTMLDivElement | null>(null)
 
-    // Check if mobile device
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 640
+    const isMobile = typeof window !== 'undefined' && (
+        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 640
+    )
 
-    // Force expanded mode on mobile
     useEffect(() => {
         if (isMobile && mode === 'compact') {
             setMode('expanded')
         }
     }, [isMobile, mode])
 
-    // Save mode preference to localStorage
     useEffect(() => {
-        localStorage.setItem('chatMode', mode)
+        try {
+            localStorage.setItem('chatMode', mode)
+        } catch (e) {
+            console.warn('Could not save to localStorage:', e)
+        }
     }, [mode])
 
     const scrollToBottom = useCallback((smooth = true) => {
@@ -74,8 +104,10 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
     }, [])
 
     useLayoutEffect(() => {
-        scrollToBottom(true)
-    }, [messages, isLoading, scrollToBottom])
+        if (isOpen) {
+            scrollToBottom(true)
+        }
+    }, [messages, isLoading, scrollToBottom, isOpen])
 
     const toggleMode = () => {
         setMode(prev => prev === 'compact' ? 'expanded' : 'compact')
@@ -158,28 +190,37 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
 
     if (!isOpen) return null
 
-    // Dynamic styles based on mode
     const containerStyles = mode === 'compact'
-        ? 'w-full max-w-md h-[600px]'  // Compact: 400px width, 600px height
-        : 'w-[90vw] h-[90vh] max-w-6xl' // Expanded: 90% viewport
+        ? 'w-full max-w-md h-[600px]'
+        : 'w-[90vw] h-[90vh] max-w-6xl'
 
     const overlayStyles = mode === 'compact'
         ? 'bg-black/50'
-        : 'bg-black/70' // Darker overlay in expanded mode
+        : 'bg-black/70'
 
     const positionStyles = mode === 'compact'
-        ? 'items-end justify-end'  // Bottom-right corner
-        : 'items-center justify-center' // Centered
+        ? 'items-end justify-end'
+        : 'items-center justify-center'
 
     const messageMaxWidth = mode === 'compact'
         ? 'max-w-[85%]'
-        : 'max-w-[75%]' // Wider messages in expanded mode
+        : 'max-w-[75%]'
 
     return (
-        <div className={`fixed inset-0 ${overlayStyles} flex ${positionStyles} p-4 z-50 transition-all duration-300`}>
-            <div className={`bg-white rounded-lg shadow-xl ${containerStyles} flex flex-col transition-all duration-300 ease-in-out`}>
+        <div
+            className={`fixed inset-0 ${overlayStyles} flex ${positionStyles} p-4 z-50 transition-colors duration-300`}
+            onClick={(e) => {
+                if (mode === 'compact' && e.target === e.currentTarget) {
+                    onClose()
+                }
+            }}
+        >
+            <div
+                className={`bg-white rounded-lg shadow-2xl ${containerStyles} flex flex-col transition-all duration-300 ease-in-out`}
+                onClick={(e) => e.stopPropagation()}
+            >
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b bg-primary-500 text-white rounded-t-lg">
+                <div className="flex items-center justify-between p-4 border-b bg-primary-500 text-white rounded-t-lg shrink-0">
                     <div className="flex items-center gap-2">
                         <span className="text-xl">🤖</span>
                         <h3 className="font-semibold">AI Assistant</h3>
@@ -188,8 +229,7 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        {/* Mode toggle button (hide on mobile) */}
+                    <div className="flex items-center gap-1">
                         {!isMobile && (
                             <button
                                 onClick={toggleMode}
@@ -210,7 +250,6 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                             </button>
                         )}
 
-                        {/* Close button */}
                         <button
                             onClick={onClose}
                             className="hover:bg-primary-600 p-2 rounded transition-colors"
@@ -226,7 +265,7 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
 
                 {/* Error Banner */}
                 {error && (
-                    <div className="bg-red-50 border-l-4 border-primary-500 text-red-900 p-3 text-sm flex items-start justify-between">
+                    <div className="bg-red-50 border-l-4 border-primary-500 text-red-900 p-3 text-sm flex items-start justify-between shrink-0">
                         <div className="flex items-start gap-2">
                             <span className="text-primary-500 font-bold">⚠️</span>
                             <span>{error}</span>
@@ -245,7 +284,7 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                 {/* Messages */}
                 <div
                     ref={listRef}
-                    className="flex-1 overflow-y-auto p-4 space-y-4"
+                    className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
                     aria-live="polite"
                     aria-relevant="additions"
                 >
@@ -269,22 +308,14 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                                         <MarkdownContent content={message.content} />
                                     </div>
                                 ) : (
-                                    <p className="text-sm whitespace-pre-wrap">
+                                    <p className="text-sm whitespace-pre-wrap break-words">
                                         {message.content}
                                     </p>
                                 )}
 
                                 {/* Citations */}
-                                {message.citations && message.citations.length > 0 && (
-                                    <div className="mt-3 pt-3 border-t border-gray-300">
-                                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                                            <span className="font-semibold">📚 Sources:</span>
-                                            <span>
-                                                {message.citations.length} reference
-                                                {message.citations.length > 1 ? 's' : ''}
-                                            </span>
-                                        </div>
-                                    </div>
+                                {message.role === 'assistant' && message.citations && message.citations.length > 0 && (
+                                    <CitationList citations={message.citations} />
                                 )}
 
                                 {/* Timestamp */}
@@ -323,7 +354,7 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                 </div>
 
                 {/* Input */}
-                <div className="p-4 border-t bg-gray-50">
+                <div className="p-4 border-t bg-gray-50 shrink-0">
                     <div className="flex gap-2">
                         <textarea
                             value={input}
@@ -338,7 +369,7 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                         <button
                             onClick={handleSend}
                             disabled={!input.trim() || isLoading}
-                            className="bg-primary-500 hover:bg-primary-600 active:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                            className="bg-primary-500 hover:bg-primary-600 active:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors font-medium self-end"
                             type="button"
                             aria-label="Send message"
                         >
@@ -346,7 +377,6 @@ export default function ChatWidget({ isOpen, onClose }: ChatWidgetProps) {
                         </button>
                     </div>
 
-                    {/* Status bar */}
                     <div className="text-xs text-gray-500 mt-2 flex justify-between items-center">
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${conversationId ? 'bg-green-500' : 'bg-gray-400'}`} />
