@@ -1,7 +1,5 @@
 # Database Migration Runbook
 
-## Overview
-
 This guide provides step-by-step procedures for safely creating, testing, and deploying database schema changes across
 all environments.
 
