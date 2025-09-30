@@ -6,29 +6,31 @@ Initializes the RAG system, processes documents, and sets up the vector store
 """
 import os
 import sys
-import django
 from pathlib import Path
 
+import django
+
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.development')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.development")
 django.setup()
 
-from django.core.management import call_command
-from django.conf import settings
-from apps.documents.models import Document, DocumentChunk
-from apps.rag.pipeline import rag_pipeline
-from apps.rag.utils import validate_embeddings, get_vector_store
 import logging
-
 # Setup logging with Windows-compatible formatting
 import sys
+
+from django.conf import settings
+from django.core.management import call_command
+
+from apps.documents.models import Document, DocumentChunk
+from apps.rag.pipeline import rag_pipeline
+from apps.rag.utils import get_vector_store, validate_embeddings
 
 if sys.platform == "win32":
     # Windows-compatible logging without emojis
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(message)s',
-        handlers=[logging.StreamHandler(sys.stdout)]
+        format="%(asctime)s - %(name)s - %(message)s",
+        handlers=[logging.StreamHandler(sys.stdout)],
     )
 else:
     logging.basicConfig(level=logging.INFO)
@@ -38,11 +40,7 @@ logger = logging.getLogger(__name__)
 
 def create_directories():
     """Create necessary directories"""
-    directories = [
-        'media/documents',
-        'logs',
-        'staticfiles'
-    ]
+    directories = ["media/documents", "logs", "staticfiles"]
 
     for directory in directories:
         path = Path(directory)
@@ -54,7 +52,7 @@ def run_migrations():
     """Run database migrations"""
     logger.info("Running database migrations...")
     try:
-        call_command('migrate', verbosity=0)
+        call_command("migrate", verbosity=0)
         logger.info("[OK] Database migrations completed")
     except Exception as e:
         logger.error(f"[ERROR] Migration failed: {e}")
@@ -66,9 +64,10 @@ def create_superuser():
     """Create superuser if needed"""
     try:
         from django.contrib.auth.models import User
+
         if not User.objects.filter(is_superuser=True).exists():
             logger.info("Creating superuser...")
-            call_command('createsuperuser', interactive=True)
+            call_command("createsuperuser", interactive=True)
         else:
             logger.info("✓ Superuser already exists")
     except Exception as e:
@@ -79,10 +78,7 @@ def validate_environment():
     """Validate environment variables and configuration"""
     logger.info("Validating environment configuration...")
 
-    required_vars = [
-        'OPENROUTER_API_KEY',
-        'SECRET_KEY'
-    ]
+    required_vars = ["OPENROUTER_API_KEY", "SECRET_KEY"]
 
     missing_vars = []
     for var in required_vars:
@@ -112,7 +108,7 @@ def process_existing_documents():
     logger.info(f"Found {count} unprocessed documents")
 
     try:
-        call_command('process_documents', verbosity=1)
+        call_command("process_documents", verbosity=1)
         logger.info("[OK] Document processing completed")
         return True
     except Exception as e:

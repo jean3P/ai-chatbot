@@ -4,10 +4,11 @@ SentenceTransformers Embedding Adapter
 
 Implements IEmbeddingProvider using local SentenceTransformers models.
 """
-from typing import List
 import logging
-from sentence_transformers import SentenceTransformer
+from typing import List
+
 import numpy as np
+from sentence_transformers import SentenceTransformer
 
 from apps.domain.models import EmbeddingError
 
@@ -22,11 +23,7 @@ class SentenceTransformersEmbedding:
     Free, fast, and no rate limits.
     """
 
-    def __init__(
-            self,
-            model_name: str = "all-MiniLM-L6-v2",
-            device: str = "cpu"
-    ):
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2", device: str = "cpu"):
         """
         Initialize SentenceTransformers embeddings
 
@@ -78,7 +75,7 @@ class SentenceTransformersEmbedding:
                 texts,
                 normalize_embeddings=True,  # L2 normalization
                 show_progress_bar=False,
-                convert_to_numpy=True
+                convert_to_numpy=True,
             )
 
             # Convert to list of lists
@@ -115,7 +112,7 @@ class SentenceTransformersEmbedding:
                 text.strip(),
                 normalize_embeddings=True,
                 show_progress_bar=False,
-                convert_to_numpy=True
+                convert_to_numpy=True,
             )
 
             # Convert to list

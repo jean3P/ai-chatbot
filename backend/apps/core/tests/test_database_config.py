@@ -1,9 +1,10 @@
 """
 Tests for database configuration
 """
+
 import pytest
-from django.db import connection
 from django.conf import settings
+from django.db import connection
 
 
 @pytest.mark.django_db
@@ -22,31 +23,39 @@ class TestDatabaseConfiguration:
         with connection.cursor() as cursor:
             cursor.execute("SELECT current_database()")
             db_name = cursor.fetchone()[0]
-            assert db_name == 'test_chatbot', f"Expected test_chatbot, got {db_name}"
+            assert db_name == "test_chatbot", f"Expected test_chatbot, got {db_name}"
 
     def test_database_is_postgresql(self):
         """Verify we're using PostgreSQL, not SQLite"""
-        assert connection.vendor == 'postgresql', f"Expected postgresql, got {connection.vendor}"
+        assert (
+            connection.vendor == "postgresql"
+        ), f"Expected postgresql, got {connection.vendor}"
 
     def test_database_port(self):
         """Verify using test database port 5433"""
-        db_settings = settings.DATABASES['default']
-        assert db_settings['PORT'] == '5433', f"Expected port 5433, got {db_settings['PORT']}"
+        db_settings = settings.DATABASES["default"]
+        assert (
+            db_settings["PORT"] == "5433"
+        ), f"Expected port 5433, got {db_settings['PORT']}"
 
     def test_pgvector_available(self):
         """Verify pgvector extension is available"""
         with connection.cursor() as cursor:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT EXISTS(
                     SELECT 1 FROM pg_extension WHERE extname = 'vector'
                 )
-            """)
+            """
+            )
             result = cursor.fetchone()[0]
             assert result is True, "pgvector extension not found"
 
     def test_environment_is_test(self):
         """Verify ENVIRONMENT is set to 'test'"""
-        assert settings.ENVIRONMENT == 'test', f"Expected test, got {settings.ENVIRONMENT}"
+        assert (
+            settings.ENVIRONMENT == "test"
+        ), f"Expected test, got {settings.ENVIRONMENT}"
 
 
 @pytest.mark.django_db
@@ -58,14 +67,12 @@ class TestDatabaseOperations:
         from django.contrib.auth.models import User
 
         user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123'
+            username="testuser", email="test@example.com", password="testpass123"
         )
 
-        assert user.username == 'testuser'
-        assert user.email == 'test@example.com'
-        assert user.check_password('testpass123')
+        assert user.username == "testuser"
+        assert user.email == "test@example.com"
+        assert user.check_password("testpass123")
 
     def test_database_isolation(self):
         """Test that database is clean for each test"""

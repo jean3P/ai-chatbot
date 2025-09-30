@@ -4,8 +4,9 @@ NumPy Vector Store - In-memory similarity search
 
 Fast in-memory vector store for development and testing.
 """
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 from uuid import UUID
+
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -28,10 +29,10 @@ class NumPyVectorStore:
         self._dimension: Optional[int] = None
 
     def search(
-            self,
-            query_embedding: List[float],
-            top_k: int = 10,
-            filters: Optional[Dict] = None
+        self,
+        query_embedding: List[float],
+        top_k: int = 10,
+        filters: Optional[Dict] = None,
     ) -> List[ChunkResult]:
         """
         Find similar vectors using cosine similarity
@@ -65,20 +66,19 @@ class NumPyVectorStore:
         # Build results
         results = []
         for idx in top_indices:
-            results.append(ChunkResult(
-                chunk_id=self.chunk_ids[idx],
-                content=self.metadata[idx].get('content', ''),
-                score=float(similarities[idx]),
-                metadata=self.metadata[idx]
-            ))
+            results.append(
+                ChunkResult(
+                    chunk_id=self.chunk_ids[idx],
+                    content=self.metadata[idx].get("content", ""),
+                    score=float(similarities[idx]),
+                    metadata=self.metadata[idx],
+                )
+            )
 
         return results
 
     def add_vectors(
-            self,
-            chunk_ids: List[UUID],
-            embeddings: List[List[float]],
-            metadata: List[Dict]
+        self, chunk_ids: List[UUID], embeddings: List[List[float]], metadata: List[Dict]
     ) -> None:
         """
         Add vectors to the store
@@ -89,7 +89,9 @@ class NumPyVectorStore:
             metadata: List of metadata dicts
         """
         if len(chunk_ids) != len(embeddings) != len(metadata):
-            raise ValueError("chunk_ids, embeddings, and metadata must have same length")
+            raise ValueError(
+                "chunk_ids, embeddings, and metadata must have same length"
+            )
 
         if not embeddings:
             return

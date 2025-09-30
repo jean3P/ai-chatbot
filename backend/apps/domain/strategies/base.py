@@ -4,8 +4,9 @@ Base RAG Strategy Interface
 
 Defines the interface that all RAG strategies must implement.
 """
-from typing import Protocol, List, Optional, Dict
-from apps.domain.models import Message, Answer, Chunk, Citation
+from typing import Dict, List, Optional, Protocol
+
+from apps.domain.models import Answer, Chunk, Citation, Message
 
 
 class IRagStrategy(Protocol):
@@ -17,10 +18,7 @@ class IRagStrategy(Protocol):
     """
 
     def retrieve(
-            self,
-            query: str,
-            history: List[Message],
-            filters: Optional[Dict] = None
+        self, query: str, history: List[Message], filters: Optional[Dict] = None
     ) -> List[Chunk]:
         """
         Retrieve relevant document chunks for a query
@@ -36,11 +34,11 @@ class IRagStrategy(Protocol):
         ...
 
     def build_prompt(
-            self,
-            query: str,
-            chunks: List[Chunk],
-            history: List[Message],
-            language: str = "en"
+        self,
+        query: str,
+        chunks: List[Chunk],
+        history: List[Message],
+        language: str = "en",
     ) -> List[Dict[str, str]]:
         """
         Build LLM prompt messages from context
@@ -57,11 +55,7 @@ class IRagStrategy(Protocol):
         """
         ...
 
-    def extract_citations(
-            self,
-            response: str,
-            chunks: List[Chunk]
-    ) -> List[Citation]:
+    def extract_citations(self, response: str, chunks: List[Chunk]) -> List[Citation]:
         """
         Extract citations from LLM response
 
@@ -75,11 +69,11 @@ class IRagStrategy(Protocol):
         ...
 
     def generate_answer(
-            self,
-            query: str,
-            history: List[Message],
-            language: str = "en",
-            filters: Optional[Dict] = None
+        self,
+        query: str,
+        history: List[Message],
+        language: str = "en",
+        filters: Optional[Dict] = None,
     ) -> Answer:
         """
         End-to-end answer generation

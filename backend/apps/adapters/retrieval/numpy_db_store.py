@@ -8,6 +8,7 @@ Compatible with SQLite.
 """
 
 import logging
+
 from apps.adapters.retrieval.numpy_store import NumPyVectorStore
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ class NumPyDBVectorStore(NumPyVectorStore):
             logger.info("Loading embeddings from database...")
 
             # Get all chunks with embeddings
-            chunks = DocumentChunk.objects.select_related('document').exclude(
+            chunks = DocumentChunk.objects.select_related("document").exclude(
                 embedding__isnull=True
             )
 
@@ -64,15 +65,21 @@ class NumPyDBVectorStore(NumPyVectorStore):
             for chunk in chunks:
                 chunk_ids.append(chunk.id)
                 vectors.append(chunk.embedding)
-                metadata.append({
-                    'document_id': str(chunk.document.id),
-                    'document_title': chunk.document.title,
-                    'document_type': chunk.document.document_type,
-                    'page_number': chunk.page_number,
-                    'section_title': chunk.section_title or '',
-                    'content': chunk.content,
-                    'embedding_model': chunk.metadata.get('embedding_model', 'unknown') if chunk.metadata else 'unknown'
-                })
+                metadata.append(
+                    {
+                        "document_id": str(chunk.document.id),
+                        "document_title": chunk.document.title,
+                        "document_type": chunk.document.document_type,
+                        "page_number": chunk.page_number,
+                        "section_title": chunk.section_title or "",
+                        "content": chunk.content,
+                        "embedding_model": (
+                            chunk.metadata.get("embedding_model", "unknown")
+                            if chunk.metadata
+                            else "unknown"
+                        ),
+                    }
+                )
 
             # Add to store
             self.add_vectors(chunk_ids, vectors, metadata)

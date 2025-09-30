@@ -6,11 +6,11 @@ Implements IDocumentParser using PyMuPDF (fitz) for PDF extraction.
 """
 import logging
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict, List
 
 import fitz  # PyMuPDF
 
-from apps.domain.models import DocumentContent, ValidationError, NotFoundError
+from apps.domain.models import DocumentContent, NotFoundError, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class PyMuPDFParser:
 
     def __init__(self):
         """Initialize PyMuPDF parser"""
-        self.supported_types = ['pdf']
+        self.supported_types = ["pdf"]
 
     def parse(self, file_path: str) -> DocumentContent:
         """
@@ -45,7 +45,7 @@ class PyMuPDFParser:
         if not path.exists():
             raise NotFoundError(f"File not found: {file_path}")
 
-        if not path.suffix.lower() == '.pdf':
+        if not path.suffix.lower() == ".pdf":
             raise ValidationError(f"Not a PDF file: {file_path}")
 
         try:
@@ -70,13 +70,13 @@ class PyMuPDFParser:
                 sections = self._extract_sections(text)
 
                 page_data = {
-                    'page_number': page_num + 1,
-                    'content': text.strip(),
-                    'sections': sections,
-                    'metadata': {
-                        'char_count': len(text),
-                        'extraction_method': 'pymupdf'
-                    }
+                    "page_number": page_num + 1,
+                    "content": text.strip(),
+                    "sections": sections,
+                    "metadata": {
+                        "char_count": len(text),
+                        "extraction_method": "pymupdf",
+                    },
                 }
 
                 pages.append(page_data)
@@ -93,11 +93,8 @@ class PyMuPDFParser:
                 pages=pages,
                 page_count=len(pages),
                 total_chars=total_chars,
-                extraction_method='pymupdf',
-                metadata={
-                    'filename': path.name,
-                    'file_size': path.stat().st_size
-                }
+                extraction_method="pymupdf",
+                metadata={"filename": path.name, "file_size": path.stat().st_size},
             )
 
         except fitz.FileDataError as e:
@@ -135,9 +132,9 @@ class PyMuPDFParser:
         import re
 
         sections = []
-        current_section = {'title': '', 'content': ''}
+        current_section = {"title": "", "content": ""}
 
-        lines = text.split('\n')
+        lines = text.split("\n")
 
         for line in lines:
             line = line.strip()
@@ -145,31 +142,26 @@ class PyMuPDFParser:
                 continue
 
             # Check if line looks like a header (ALL CAPS, short)
-            if (line.isupper() and
-                    len(line.split()) <= 10 and
-                    len(line) > 3):
+            if line.isupper() and len(line.split()) <= 10 and len(line) > 3:
 
                 # Save previous section
-                if current_section['content']:
+                if current_section["content"]:
                     sections.append(current_section.copy())
 
                 # Start new section
-                current_section = {
-                    'title': line,
-                    'content': ''
-                }
+                current_section = {"title": line, "content": ""}
             else:
                 # Add to current section
-                if current_section['content']:
-                    current_section['content'] += '\n'
-                current_section['content'] += line
+                if current_section["content"]:
+                    current_section["content"] += "\n"
+                current_section["content"] += line
 
         # Add last section
-        if current_section['content']:
+        if current_section["content"]:
             sections.append(current_section)
 
         # If no sections found, treat all as one section
         if not sections:
-            sections = [{'title': '', 'content': text}]
+            sections = [{"title": "", "content": text}]
 
         return sections

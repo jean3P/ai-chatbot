@@ -18,15 +18,17 @@ class FakeParser:
             content: DocumentContent to return
         """
         self.content = content or DocumentContent(
-            pages=[{
-                'page_number': 1,
-                'content': 'Test content',
-                'sections': [{'title': '', 'content': 'Test content'}],
-                'metadata': {}
-            }],
+            pages=[
+                {
+                    "page_number": 1,
+                    "content": "Test content",
+                    "sections": [{"title": "", "content": "Test content"}],
+                    "metadata": {},
+                }
+            ],
             page_count=1,
             total_chars=12,
-            extraction_method='fake'
+            extraction_method="fake",
         )
         self.parse_called = False
 

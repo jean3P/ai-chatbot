@@ -4,11 +4,11 @@ Django ORM Repository Adapters
 
 Implements repository ports using Django models.
 """
-from typing import Optional, List
-from uuid import UUID
 import logging
+from typing import List, Optional
+from uuid import UUID
 
-from apps.domain.models import Message, Conversation, MessageRole
+from apps.domain.models import Conversation, Message, MessageRole
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class DjangoMessageRepository:
                 # Update existing
                 orm_message.content = message.content
                 orm_message.metadata = message.metadata
-                orm_message.save(update_fields=['content', 'metadata'])
+                orm_message.save(update_fields=["content", "metadata"])
 
             except ORMMessage.DoesNotExist:
                 # Create new
@@ -48,7 +48,7 @@ class DjangoMessageRepository:
                     conversation_id=message.conversation_id,
                     role=message.role.value,
                     content=message.content,
-                    metadata=message.metadata
+                    metadata=message.metadata,
                 )
 
             # Convert back to domain model
@@ -78,9 +78,7 @@ class DjangoMessageRepository:
             return None
 
     def list_by_conversation(
-            self,
-            conversation_id: UUID,
-            limit: Optional[int] = None
+        self, conversation_id: UUID, limit: Optional[int] = None
     ) -> List[Message]:
         """
         List messages in a conversation
@@ -94,9 +92,9 @@ class DjangoMessageRepository:
         """
         from apps.chat.models import Message as ORMMessage
 
-        queryset = ORMMessage.objects.filter(
-            conversation_id=conversation_id
-        ).order_by('created_at')
+        queryset = ORMMessage.objects.filter(conversation_id=conversation_id).order_by(
+            "created_at"
+        )
 
         if limit:
             queryset = queryset[:limit]
@@ -126,7 +124,7 @@ class DjangoMessageRepository:
             role=MessageRole(orm_message.role),
             content=orm_message.content,
             metadata=orm_message.metadata or {},
-            created_at=orm_message.created_at
+            created_at=orm_message.created_at,
         )
 
 
@@ -157,7 +155,7 @@ class DjangoConversationRepository:
                 orm_conv.title = conversation.title
                 orm_conv.language = conversation.language
                 orm_conv.updated_at = conversation.updated_at
-                orm_conv.save(update_fields=['title', 'language', 'updated_at'])
+                orm_conv.save(update_fields=["title", "language", "updated_at"])
 
             except ORMConversation.DoesNotExist:
                 # Create new
@@ -166,7 +164,7 @@ class DjangoConversationRepository:
                     session_id=conversation.session_id,
                     user_id=conversation.user_id,
                     title=conversation.title,
-                    language=conversation.language
+                    language=conversation.language,
                 )
 
             # Convert back to domain
@@ -196,9 +194,7 @@ class DjangoConversationRepository:
             return None
 
     def list_by_session(
-            self,
-            session_id: str,
-            limit: Optional[int] = None
+        self, session_id: str, limit: Optional[int] = None
     ) -> List[Conversation]:
         """
         List conversations by session
@@ -212,9 +208,9 @@ class DjangoConversationRepository:
         """
         from apps.chat.models import Conversation as ORMConversation
 
-        queryset = ORMConversation.objects.filter(
-            session_id=session_id
-        ).order_by('-updated_at')
+        queryset = ORMConversation.objects.filter(session_id=session_id).order_by(
+            "-updated_at"
+        )
 
         if limit:
             queryset = queryset[:limit]
@@ -222,9 +218,7 @@ class DjangoConversationRepository:
         return [self._to_domain(conv) for conv in queryset]
 
     def list_by_user(
-            self,
-            user_id: UUID,
-            limit: Optional[int] = None
+        self, user_id: UUID, limit: Optional[int] = None
     ) -> List[Conversation]:
         """
         List conversations by user
@@ -238,9 +232,9 @@ class DjangoConversationRepository:
         """
         from apps.chat.models import Conversation as ORMConversation
 
-        queryset = ORMConversation.objects.filter(
-            user_id=user_id
-        ).order_by('-updated_at')
+        queryset = ORMConversation.objects.filter(user_id=user_id).order_by(
+            "-updated_at"
+        )
 
         if limit:
             queryset = queryset[:limit]
@@ -272,5 +266,5 @@ class DjangoConversationRepository:
             user_id=orm_conv.user_id,
             messages=[],  # Don't load messages automatically
             created_at=orm_conv.created_at,
-            updated_at=orm_conv.updated_at
+            updated_at=orm_conv.updated_at,
         )

@@ -6,7 +6,7 @@ Embedding Provider Port - Interface for vector embeddings
 This port defines the contract for converting text to vector embeddings.
 """
 
-from typing import Protocol, List
+from typing import List, Protocol
 
 
 class IEmbeddingProvider(Protocol):

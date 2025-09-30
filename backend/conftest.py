@@ -6,15 +6,15 @@ Pytest configuration and fixtures.
 import pytest
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def django_db_setup():
     """Verify test database configuration."""
     from django.conf import settings
 
-    db_config = settings.DATABASES['default']
-    assert db_config['NAME'] == 'test_chatbot'
-    assert db_config['PORT'] == '5433'
-    assert settings.ENVIRONMENT == 'test'
+    db_config = settings.DATABASES["default"]
+    assert db_config["NAME"] == "test_chatbot"
+    assert db_config["PORT"] == "5433"
+    assert settings.ENVIRONMENT == "test"
 
 
 @pytest.fixture(autouse=True)

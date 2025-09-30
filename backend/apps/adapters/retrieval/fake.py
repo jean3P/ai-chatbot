@@ -4,7 +4,7 @@
 Fake Vector Store for testing
 """
 
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from apps.domain.models import ChunkResult
@@ -29,10 +29,10 @@ class FakeVectorStore:
         self._vectors = []
 
     def search(
-            self,
-            query_embedding: List[float],
-            top_k: int = 10,
-            filters: Optional[Dict] = None
+        self,
+        query_embedding: List[float],
+        top_k: int = 10,
+        filters: Optional[Dict] = None,
     ) -> List[ChunkResult]:
         """Return predetermined results"""
         self.search_called = True
@@ -40,10 +40,7 @@ class FakeVectorStore:
         return self.results[:top_k]
 
     def add_vectors(
-            self,
-            chunk_ids: List[UUID],
-            embeddings: List[List[float]],
-            metadata: List[Dict]
+        self, chunk_ids: List[UUID], embeddings: List[List[float]], metadata: List[Dict]
     ) -> None:
         """Track that vectors were added"""
         self.add_vectors_called = True

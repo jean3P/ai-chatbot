@@ -28,12 +28,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # ============================================================================
 
 COMMON_DB_SETTINGS = {
-    'ENGINE': 'django.db.backends.postgresql',
-    'CONN_MAX_AGE': 60,  # Connection pooling: keep connections for 60 seconds
-    'ATOMIC_REQUESTS': True,  # Wrap each request in a transaction
-    'OPTIONS': {
-        'connect_timeout': 10,  # Connection timeout in seconds
-        'application_name': 'swisson-chatbot',  # Appears in pg_stat_activity
+    "ENGINE": "django.db.backends.postgresql",
+    "CONN_MAX_AGE": 60,  # Connection pooling: keep connections for 60 seconds
+    "ATOMIC_REQUESTS": True,  # Wrap each request in a transaction
+    "OPTIONS": {
+        "connect_timeout": 10,  # Connection timeout in seconds
+        "application_name": "swisson-chatbot",  # Appears in pg_stat_activity
     },
 }
 
@@ -41,6 +41,7 @@ COMMON_DB_SETTINGS = {
 # ============================================================================
 # ENVIRONMENT-SPECIFIC CONFIGURATIONS
 # ============================================================================
+
 
 def get_database_config(environment: str) -> dict:
     """
@@ -64,17 +65,16 @@ def get_database_config(environment: str) -> dict:
     """
     # Map environment names to their config functions (don't call them yet!)
     config_functions = {
-        'test': _get_test_config,
-        'development': _get_development_config,
-        'staging': _get_staging_config,
-        'production': _get_production_config,
+        "test": _get_test_config,
+        "development": _get_development_config,
+        "staging": _get_staging_config,
+        "production": _get_production_config,
     }
 
     if environment not in config_functions:
-        valid_envs = ', '.join(config_functions.keys())
+        valid_envs = ", ".join(config_functions.keys())
         raise ValueError(
-            f"Invalid environment '{environment}'. "
-            f"Must be one of: {valid_envs}"
+            f"Invalid environment '{environment}'. " f"Must be one of: {valid_envs}"
         )
 
     # Now call the specific config function for the requested environment
@@ -91,17 +91,17 @@ def _get_test_config() -> dict:
     """
     return {
         **COMMON_DB_SETTINGS,
-        'NAME': 'test_chatbot',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-        'PORT': os.getenv('DB_PORT', '5433'),
-        'OPTIONS': {
-            **COMMON_DB_SETTINGS['OPTIONS'],
-            'options': '-c search_path=public',
+        "NAME": "test_chatbot",
+        "USER": "postgres",
+        "PASSWORD": "postgres",
+        "HOST": os.getenv("DB_HOST", "127.0.0.1"),
+        "PORT": os.getenv("DB_PORT", "5433"),
+        "OPTIONS": {
+            **COMMON_DB_SETTINGS["OPTIONS"],
+            "options": "-c search_path=public",
         },
-        'TEST': {
-            'NAME': 'test_chatbot',  # Don't create separate test database
+        "TEST": {
+            "NAME": "test_chatbot",  # Don't create separate test database
         },
     }
 
@@ -116,14 +116,14 @@ def _get_development_config() -> dict:
     """
     return {
         **COMMON_DB_SETTINGS,
-        'NAME': os.getenv('DB_NAME', 'chatbot_dev'),
-        'USER': os.getenv('DB_USER', 'chatbot_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'dev_password_123'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '5432'),
-        'OPTIONS': {
-            **COMMON_DB_SETTINGS['OPTIONS'],
-            'sslmode': 'disable',  # Local development, no SSL needed
+        "NAME": os.getenv("DB_NAME", "chatbot_dev"),
+        "USER": os.getenv("DB_USER", "chatbot_user"),
+        "PASSWORD": os.getenv("DB_PASSWORD", "dev_password_123"),
+        "HOST": os.getenv("DB_HOST", "localhost"),
+        "PORT": os.getenv("DB_PORT", "5432"),
+        "OPTIONS": {
+            **COMMON_DB_SETTINGS["OPTIONS"],
+            "sslmode": "disable",  # Local development, no SSL needed
         },
     }
 
@@ -137,7 +137,7 @@ def _get_staging_config() -> dict:
     Credentials from environment variables (populated by AWS Secrets Manager).
     """
     # Verify required environment variables
-    required_vars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST']
+    required_vars = ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST"]
     missing_vars = [var for var in required_vars if not os.getenv(var)]
 
     if missing_vars:
@@ -147,16 +147,16 @@ def _get_staging_config() -> dict:
 
     return {
         **COMMON_DB_SETTINGS,
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT', '5432'),
-        'CONN_MAX_AGE': 300,  # Longer connection pooling for staging (5 minutes)
-        'OPTIONS': {
-            **COMMON_DB_SETTINGS['OPTIONS'],
-            'sslmode': 'require',  # Require SSL but don't verify certificate
-            'sslrootcert': str(BASE_DIR / 'certs' / 'rds-ca-bundle.pem'),
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT", "5432"),
+        "CONN_MAX_AGE": 300,  # Longer connection pooling for staging (5 minutes)
+        "OPTIONS": {
+            **COMMON_DB_SETTINGS["OPTIONS"],
+            "sslmode": "require",  # Require SSL but don't verify certificate
+            "sslrootcert": str(BASE_DIR / "certs" / "rds-ca-bundle.pem"),
         },
     }
 
@@ -171,7 +171,7 @@ def _get_production_config() -> dict:
     Longest connection pooling for performance.
     """
     # Verify required environment variables
-    required_vars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST']
+    required_vars = ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST"]
     missing_vars = [var for var in required_vars if not os.getenv(var)]
 
     if missing_vars:
@@ -181,16 +181,16 @@ def _get_production_config() -> dict:
 
     return {
         **COMMON_DB_SETTINGS,
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT', '5432'),
-        'CONN_MAX_AGE': 600,  # Longest connection pooling for production (10 minutes)
-        'OPTIONS': {
-            **COMMON_DB_SETTINGS['OPTIONS'],
-            'sslmode': 'verify-full',  # Strongest SSL mode - verify certificate
-            'sslrootcert': str(BASE_DIR / 'certs' / 'rds-ca-bundle.pem'),
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT", "5432"),
+        "CONN_MAX_AGE": 600,  # Longest connection pooling for production (10 minutes)
+        "OPTIONS": {
+            **COMMON_DB_SETTINGS["OPTIONS"],
+            "sslmode": "verify-full",  # Strongest SSL mode - verify certificate
+            "sslrootcert": str(BASE_DIR / "certs" / "rds-ca-bundle.pem"),
         },
     }
 
@@ -198,6 +198,7 @@ def _get_production_config() -> dict:
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
+
 
 def get_all_environments() -> list:
     """
@@ -210,7 +211,7 @@ def get_all_environments() -> list:
         get_all_environments()
         ['test', 'development', 'staging', 'production']
     """
-    return ['test', 'development', 'staging', 'production']
+    return ["test", "development", "staging", "production"]
 
 
 def validate_environment(environment: str) -> bool:
@@ -252,11 +253,11 @@ def get_connection_info(environment: str) -> dict:
     config = get_database_config(environment)
 
     return {
-        'environment': environment,
-        'host': config['HOST'],
-        'port': config['PORT'],
-        'database': config['NAME'],
-        'user': config['USER'],
-        'password': '***',  # Never expose passwords
-        'ssl_mode': config['OPTIONS'].get('sslmode', 'N/A'),
+        "environment": environment,
+        "host": config["HOST"],
+        "port": config["PORT"],
+        "database": config["NAME"],
+        "user": config["USER"],
+        "password": "***",  # Never expose passwords
+        "ssl_mode": config["OPTIONS"].get("sslmode", "N/A"),
     }
