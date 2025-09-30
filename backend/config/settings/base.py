@@ -94,8 +94,15 @@ from config.settings.databases import get_database_config
 # Defaults to 'development' for local work
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
-# Load database configuration for current environment
-DATABASES = {"default": get_database_config(ENVIRONMENT)}
+DATABASES = {
+    "default": {
+        **get_database_config(ENVIRONMENT),  # ✓ Unpack the dictionary
+        "OPTIONS": {
+            **get_database_config(ENVIRONMENT).get("OPTIONS", {}),
+            "connect_timeout": 5,
+        },
+    }
+}
 
 # ============================================================================
 # END DATABASE CONFIGURATION
