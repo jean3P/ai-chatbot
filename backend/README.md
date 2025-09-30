@@ -12,6 +12,7 @@ Enterprise-grade Django backend for RAG-powered chatbot with pgvector semantic s
 - [Installation](#installation)
 - [Database Architecture](#database-architecture)
 - [Configuration](#configuration)
+- [Admin Access](#admin-access)
 - [Running Migrations](#running-migrations)
 - [Document Processing](#document-processing)
 - [Data Management](#data-management)
@@ -347,6 +348,109 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 **Important:** `EMBEDDING_DIMENSION` must match your chosen model.
 
 ---
+
+## Admin Access
+
+### Creating Admin User
+
+The Django admin interface requires a superuser account:
+
+```bash
+# Create superuser
+uv run python manage.py createsuperuser
+
+# Follow prompts:
+# Username: admin
+# Email: admin@localhost
+# Password: [choose secure password]
+# Password (again): [confirm]
+```
+
+**Password Requirements:**
+- Minimum 8 characters
+- Cannot be too similar to username
+- Cannot be entirely numeric
+- Cannot be too common (e.g., "password123")
+
+### Accessing Admin
+
+```bash
+# Start server
+uv run python manage.py runserver
+
+# Access admin panel
+# http://localhost:8000/admin/
+```
+
+**Log in with your credentials**
+
+The admin interface provides:
+- User management (Authentication and Authorization)
+- Chat history (Conversations, Messages)
+- Document management (Documents, Document chunks)
+- Full database CRUD operations
+
+### Resetting Forgotten Password
+
+**Method 1: Change password in shell**
+
+```bash
+uv run python manage.py shell
+```
+
+```python
+from django.contrib.auth.models import User
+
+# Find user
+user = User.objects.get(username='admin')
+
+# Set new password
+user.set_password('your-new-password')
+user.save()
+
+print(f"Password updated for {user.username}")
+exit()
+```
+
+**Method 2: Use changepassword command**
+
+```bash
+uv run python manage.py changepassword admin
+```
+
+**Method 3: Delete and recreate superuser**
+
+```bash
+uv run python manage.py shell
+```
+
+```python
+from django.contrib.auth.models import User
+
+# Delete old user
+User.objects.filter(username='admin').delete()
+exit()
+```
+
+```bash
+# Create new superuser
+uv run python manage.py createsuperuser
+```
+
+### Security Best Practices
+
+For development:
+- Username: `admin` or your name
+- Password: At least 12 characters, mixed case, numbers
+- Email: Use real email if testing email features
+
+For production:
+- **Never use default credentials**
+- Use strong unique passwords (20+ characters)
+- Enable two-factor authentication
+- Limit admin access to necessary users only
+- Use separate admin accounts per person
+- Monitor admin access logs
 
 ## Running Migrations
 
