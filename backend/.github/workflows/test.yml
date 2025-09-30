@@ -1,0 +1,164 @@
+# backend/.github/workflows/test.yml
+
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_DB: test_chatbot
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=en_US.UTF-8"
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d test_chatbot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras
+
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+
+      - name: Setup PostgreSQL extensions
+        run: |
+          psql -h localhost -U postgres -d test_chatbot -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+          psql -h localhost -U postgres -d test_chatbot -c "CREATE EXTENSION IF NOT EXISTS vector;"
+          psql -h localhost -U postgres -d test_chatbot -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
+          echo "Verifying extensions:"
+          psql -h localhost -U postgres -d test_chatbot -c "\dx"
+        env:
+          PGPASSWORD: postgres
+
+      - name: Run Django checks
+        run: |
+          uv run python manage.py check --database default
+        env:
+          ENVIRONMENT: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: test_chatbot
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DEBUG: True
+          SECRET_KEY: test-secret-key-for-ci
+          REDIS_URL: redis://localhost:6379/0
+
+      - name: Run migrations
+        run: |
+          uv run python manage.py migrate --settings=config.settings.test
+        env:
+          ENVIRONMENT: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: test_chatbot
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DEBUG: True
+          SECRET_KEY: test-secret-key-for-ci
+          REDIS_URL: redis://localhost:6379/0
+
+      - name: Run tests with pytest
+        run: |
+          uv run pytest apps/ -v --tb=short
+        env:
+          ENVIRONMENT: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: test_chatbot
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DEBUG: True
+          SECRET_KEY: test-secret-key-for-ci
+          REDIS_URL: redis://localhost:6379/1
+          PGVECTOR_ENABLED: true
+          EMBEDDING_DIMENSION: 384
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: backend/.pytest_cache/
+          retention-days: 7
+
+  lint:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: |
+          uv sync --group dev
+
+      - name: Check code formatting with black
+        run: |
+          uv run black --check .
+
+      - name: Check import sorting with isort
+        run: |
+          uv run isort --check-only .

@@ -94,7 +94,7 @@ def _get_test_config() -> dict:
         'NAME': 'test_chatbot',
         'USER': 'postgres',
         'PASSWORD': 'postgres',
-        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
         'PORT': os.getenv('DB_PORT', '5433'),
         'OPTIONS': {
             **COMMON_DB_SETTINGS['OPTIONS'],

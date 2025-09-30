@@ -30,7 +30,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     tmpfs:
       - /var/lib/postgresql/data
     command: >
@@ -45,7 +45,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
+  # Remove restart policy for test container (tmpfs is ephemeral anyway)
+  # restart: unless-stopped  ← Comment this out or remove
 
   redis:
     image: redis:7-alpine
