@@ -13,7 +13,10 @@ def django_db_setup():
 
     db_config = settings.DATABASES["default"]
     assert db_config["NAME"] == "test_chatbot"
-    assert db_config["PORT"] in ["5432", "5433"], f"Unexpected port: {db_config['PORT']}"
+    assert db_config["PORT"] in [
+        "5432",
+        "5433",
+    ], f"Unexpected port: {db_config['PORT']}"
     assert settings.ENVIRONMENT == "test"
 
 

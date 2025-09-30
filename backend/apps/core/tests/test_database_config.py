@@ -34,9 +34,10 @@ class TestDatabaseConfiguration:
     def test_database_port(self):
         """Verify using test database port (5433 local, 5432 CI)"""
         db_settings = settings.DATABASES["default"]
-        assert db_settings["PORT"] in ["5432", "5433"], (
-            f"Expected port 5432 (CI) or 5433 (local), got {db_settings['PORT']}"
-        )
+        assert db_settings["PORT"] in [
+            "5432",
+            "5433",
+        ], f"Expected port 5432 (CI) or 5433 (local), got {db_settings['PORT']}"
 
     def test_pgvector_available(self):
         """Verify pgvector extension is available"""
