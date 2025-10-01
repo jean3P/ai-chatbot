@@ -63,6 +63,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.core.middleware.RateLimitMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -158,6 +159,9 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Django REST Framework
+# config/settings/base.py
+
+# Django REST Framework
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
@@ -167,6 +171,29 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    "DEFAULT_THROTTLE_CLASSES": [
+        "apps.core.throttling.ConfigurableAnonRateThrottle",
+        "apps.core.throttling.ConfigurableUserRateThrottle",
+        "apps.core.throttling.BurstProtectionThrottle",
+    ],
+    # Add throttle rates for scopes
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/min",
+        "user": "1000/hour",
+        "burst": "20/min",
+        "chat": "50/min",
+        "upload": "10/hour",
+    },
+}
+
+# Cache for rate limiting (required)
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+        "KEY_PREFIX": "chatbot",
+        "TIMEOUT": 300,
+    }
 }
 
 # CORS settings

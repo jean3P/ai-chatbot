@@ -9,7 +9,7 @@ from django.conf import settings
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
@@ -21,6 +21,7 @@ from apps.domain.models import ValidationError as DomainValidationError
 from apps.infrastructure.container import create_chat_service
 from apps.rag.pipeline import rag_pipeline
 
+from ..core.throttling import ChatEndpointThrottle
 from .models import Conversation, Message
 from .serializers import (
     ChatRequestSerializer,
@@ -37,6 +38,7 @@ USE_NEW_ARCHITECTURE = getattr(settings, "USE_NEW_RAG_ARCHITECTURE", False)
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([ChatEndpointThrottle])
 def chat(request):
     """
     Main chat endpoint with RAG integration - process user message and return AI response
