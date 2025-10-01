@@ -6,6 +6,7 @@ import logging
 import uuid
 
 from django.conf import settings
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -318,14 +319,102 @@ def _chat_old_architecture(data):
         )
 
 
-# Rest of the views remain the same
-@api_view(["GET"])
+@api_view(['GET', 'DELETE'])
 @permission_classes([AllowAny])
 def conversation_detail(request, conversation_id):
-    """Get conversation details with messages"""
-    conversation = get_object_or_404(Conversation, id=conversation_id)
-    serializer = ConversationSerializer(conversation)
-    return Response(serializer.data)
+    """Get or delete a single conversation"""
+    if request.method == 'GET':
+        conversation = get_object_or_404(Conversation, id=conversation_id)
+        serializer = ConversationSerializer(conversation)
+        return Response(serializer.data)
+
+    elif request.method == 'DELETE':
+        try:
+            conversation = get_object_or_404(Conversation, id=conversation_id)
+
+            # Validate ownership via session_id
+            session_id = request.headers.get('X-Session-ID') or request.GET.get('session_id')
+
+            if session_id and conversation.session_id != session_id:
+                logger.warning(
+                    f"Delete attempt denied: conversation {conversation_id} "
+                    f"belongs to session {conversation.session_id}, "
+                    f"request from {session_id}"
+                )
+                return Response(
+                    {'error': 'You do not have permission to delete this conversation'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Log deletion for audit
+            message_count = conversation.messages.count()
+            logger.info(
+                f"Deleting conversation {conversation_id}: "
+                f"{message_count} messages, "
+                f"session {conversation.session_id}"
+            )
+
+            # Delete (cascade will handle messages)
+            conversation.delete()
+
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        except Exception as e:
+            logger.error(f"Error deleting conversation {conversation_id}: {e}")
+            return Response(
+                {'error': 'Failed to delete conversation'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def conversation_delete(request, conversation_id):
+    """
+    Delete a conversation and all its messages
+
+    DELETE /api/chat/conversations/{id}/delete/
+    """
+    try:
+        conversation = get_object_or_404(Conversation, id=conversation_id)
+
+        # Validate ownership via session_id
+        session_id = request.headers.get('X-Session-ID') or request.GET.get('session_id')
+
+        if session_id and conversation.session_id != session_id:
+            logger.warning(
+                f"Delete attempt denied: conversation {conversation_id} "
+                f"belongs to session {conversation.session_id}, "
+                f"request from {session_id}"
+            )
+            return Response(
+                {'error': 'You do not have permission to delete this conversation'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Log deletion for audit
+        message_count = conversation.messages.count()
+        logger.info(
+            f"Deleting conversation {conversation_id}: "
+            f"{message_count} messages, "
+            f"session {conversation.session_id}"
+        )
+
+        # Delete (cascade will handle messages)
+        conversation.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    except Http404:
+        # Let 404 propagate naturally
+        raise
+
+    except Exception as e:
+        logger.error(f"Error deleting conversation {conversation_id}: {e}")
+        return Response(
+            {'error': 'Failed to delete conversation'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 @api_view(["GET"])

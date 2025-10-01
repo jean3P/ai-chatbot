@@ -1,3 +1,4 @@
+-- backend/scripts/create-app-user.sql
 -- =====================================================================
 -- Database Access Control Script
 -- Creates application user with minimal necessary privileges

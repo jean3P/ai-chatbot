@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/clean-database.sh
+# backend/scripts/clean-database.sh
 # Clean development or test database
 
 set -e

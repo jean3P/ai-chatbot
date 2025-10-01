@@ -1,5 +1,5 @@
 @echo off
-REM scripts/run-migrations.bat
+REM backend/scripts//run-migrations.bat
 REM Helper script to run migrations with superuser privileges (Windows)
 
 echo ==========================================

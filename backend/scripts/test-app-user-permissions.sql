@@ -1,3 +1,4 @@
+-- backend/scripts/test-app-user-permissions.sql
 -- =====================================================================
 -- Test Script for Application User Permissions
 -- =====================================================================

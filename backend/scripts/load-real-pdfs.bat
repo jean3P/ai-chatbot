@@ -1,5 +1,5 @@
 @echo off
-REM scripts/load-real-pdfs.bat
+REM backend/scripts/load-real-pdfs.bat
 REM Clear seeded data and load real PDFs (Windows)
 
 echo Clearing seeded data...

@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/load-real-pdfs.sh
+# backend/scripts/load-real-pdfs.sh
 # Clear seeded data and load real PDFs
 
 set -e
