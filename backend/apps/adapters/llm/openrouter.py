@@ -100,6 +100,19 @@ class OpenRouterLLM:
                 }
                 logger.info(f"Tokens used: {self.tokens_used['total']}")
 
+                # Calculate cost
+                from apps.infrastructure.pricing import calculate_cost
+                cost = calculate_cost(
+                    self.tokens_used["input"],
+                    self.tokens_used["output"],
+                    self.model
+                )
+                self.tokens_used["cost_usd"] = cost
+
+                logger.info(
+                    f"Tokens: {self.tokens_used['total']} "
+                    f"(${cost:.4f})"
+                )
             # Extract content
             content = response.choices[0].message.content
 
@@ -119,6 +132,10 @@ class OpenRouterLLM:
         except Exception as e:
             logger.error(f"Unexpected error in LLM generation: {e}")
             raise LLMProviderError(f"Generation failed: {e}")
+
+    def get_last_usage(self) -> dict:
+        """Get token usage and cost from last call"""
+        return self.tokens_used
 
     def stream(self, messages: List[Dict[str, str]], **kwargs) -> Iterator[str]:
         """

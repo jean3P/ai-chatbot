@@ -16,6 +16,11 @@ load_dotenv(BASE_DIR / ".env.local")
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-change-this-in-production")
 
+# Cost tracking settings
+DAILY_COST_BUDGET_USD = float(os.getenv("DAILY_COST_BUDGET_USD", "50.0"))
+BUDGET_ALERT_THRESHOLD = float(os.getenv("BUDGET_ALERT_THRESHOLD", "0.8"))
+BUDGET_ALERT_EMAIL = os.getenv("BUDGET_ALERT_EMAIL", "jeanpool@swisson.com")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 

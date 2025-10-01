@@ -8,9 +8,12 @@ to handle the complete chat use case.
 """
 
 import logging
+import time
 from typing import Optional
 from uuid import UUID
 
+from apps.chat.models import AnswerLog
+from apps.core.budget_monitor import budget_monitor
 from apps.domain.models import (
     Answer,
     Conversation,
@@ -22,6 +25,7 @@ from apps.domain.models import (
 )
 from apps.domain.ports.repositories import IConversationRepository, IMessageRepository
 from apps.domain.strategies.base import IRagStrategy
+from apps.infrastructure.pricing import calculate_cost
 
 logger = logging.getLogger(__name__)
 
@@ -55,22 +59,24 @@ class ChatService:
         self._message_repo = message_repo
         self._conversation_repo = conversation_repo
 
+    # apps/domain/services/chat_service.py
+
     def answer_question(
-        self, conversation_id: UUID, query: str, language: str = "en"
+            self, conversation_id: UUID, query: str, language: str = "en"
     ) -> Answer:
         """
-        Generate answer to user's question
-
-        This is the main use case for the chat service.
+        Generate answer to user's question with cost tracking and budget enforcement
 
         Steps:
-        1. Load conversation
-        2. Save user message
-        3. Get conversation history
-        4. Generate answer using RAG
-        5. Save assistant message
-        6. Update conversation
-        7. Return answer
+        1. Validate input
+        2. Check daily budget (NEW)
+        3. Load conversation
+        4. Save user message
+        5. Get conversation history
+        6. Generate answer using RAG
+        7. Save assistant message
+        8. Log costs (NEW)
+        9. Return answer
 
         Args:
             conversation_id: UUID of the conversation
@@ -82,13 +88,12 @@ class ChatService:
 
         Raises:
             NotFoundError: If conversation doesn't exist
-            ValidationError: If query is empty or invalid
+            ValidationError: If query is empty, invalid, or budget exceeded
             InsufficientContextError: If no relevant info found
         """
-        import time
-
         start_time = time.time()
-        # Validate input
+
+        # 1. Validate input
         if not query or not query.strip():
             raise ValidationError("Query cannot be empty")
 
@@ -96,7 +101,25 @@ class ChatService:
             logger.warning(f"Invalid language '{language}', defaulting to 'en'")
             language = "en"
 
-        # Load conversation
+        # 2. Check budget before processing (NEW)
+        budget_status = budget_monitor.check_budget()
+
+        if budget_status["alert_level"] == "critical":
+            logger.error(
+                f"Daily budget exceeded: ${budget_status['total_cost']:.2f} / "
+                f"${budget_status['daily_budget']:.2f}"
+            )
+            raise ValidationError(
+                "Daily cost budget exceeded. Please try again tomorrow or contact support."
+            )
+
+        # Log warning if approaching limit
+        if budget_status["alert_level"] == "warning":
+            logger.warning(
+                f"Budget warning: {budget_status['budget_used_pct']:.1f}% used"
+            )
+
+        # 3. Load conversation
         conversation = self._conversation_repo.get(conversation_id)
         if not conversation:
             raise NotFoundError(f"Conversation {conversation_id} not found")
@@ -104,23 +127,23 @@ class ChatService:
         logger.info(f"Processing query for conversation {conversation_id}")
 
         try:
-            # Save user message
+            # 4. Save user message
             user_message = Message(
                 conversation_id=conversation_id, role=MessageRole.USER, content=query
             )
             user_message = self._message_repo.save(user_message)
 
-            # Get conversation history
+            # 5. Get conversation history
             history = self._message_repo.list_by_conversation(
-                conversation_id, limit=10  # Last 10 messages
+                conversation_id, limit=10
             )
 
-            # Generate answer using RAG
+            # 6. Generate answer using RAG
             answer = self._rag_strategy.generate_answer(
                 query=query, history=history, language=language
             )
 
-            # Save assistant message
+            # 7. Save assistant message
             assistant_message = Message(
                 conversation_id=conversation_id,
                 role=MessageRole.ASSISTANT,
@@ -147,9 +170,10 @@ class ChatService:
             self._conversation_repo.save(conversation)
 
             logger.info(
-                f"Successfully generated answer with "
-                f"{len(answer.citations)} citations"
+                f"Successfully generated answer with {len(answer.citations)} citations"
             )
+
+            # 8. Log costs (NEW)
             self._log_answer(answer, assistant_message, query, language, start_time)
 
             return answer
@@ -158,7 +182,6 @@ class ChatService:
             # Handle no context found
             logger.warning(f"No context found for query: {query[:50]}...")
 
-            # Save user message anyway
             fallback_answer = self._generate_fallback_answer(language)
 
             assistant_message = Message(
@@ -169,7 +192,6 @@ class ChatService:
             )
             self._message_repo.save(assistant_message)
 
-            # Return fallback answer
             return Answer(
                 content=fallback_answer,
                 citations=[],
@@ -286,14 +308,23 @@ class ChatService:
             start_time: Start timestamp
         """
         try:
-            import time
-
-            from apps.chat.models import AnswerLog
-
             total_latency = (time.time() - start_time) * 1000  # Convert to ms
 
+            # Get token usage from metadata
+            prompt_tokens = answer.metadata.get("prompt_tokens", 0)
+            completion_tokens = answer.metadata.get("completion_tokens", 0)
+            total_tokens = answer.metadata.get("total_tokens", 0)
+            llm_model = answer.metadata.get("llm_model", "unknown")
+
+            # Calculate cost
+            estimated_cost = calculate_cost(
+                prompt_tokens,
+                completion_tokens,
+                llm_model
+            )
+
             AnswerLog.objects.create(
-                message_id=message.id,  # Pass UUID, not domain object
+                message_id=message.id,
                 query=query,
                 language=language,
                 method=answer.method,
@@ -308,9 +339,17 @@ class ChatService:
                 prompt_tokens=answer.metadata.get("prompt_tokens", 0),
                 completion_tokens=answer.metadata.get("completion_tokens", 0),
                 total_latency_ms=total_latency,
+                estimated_cost_usd=estimated_cost,
                 citations_count=len(answer.citations),
                 sources_count=answer.source_count,
                 had_error=False,
             )
+
+            logger.info(
+                f"Cost: ${estimated_cost:.4f} | "
+                f"Tokens: {total_tokens} | "
+                f"Model: {llm_model}"
+            )
+
         except Exception as e:
             logger.error(f"Failed to log answer: {e}")
