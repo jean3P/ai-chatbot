@@ -21,43 +21,40 @@ class TestConversationDelete:
 
         # Create test conversation
         self.conversation = Conversation.objects.create(
-            session_id='test-session-123',
-            title='Test Conversation',
-            language='en'
+            session_id="test-session-123", title="Test Conversation", language="en"
         )
 
         # Create test messages
         self.messages = [
             Message.objects.create(
-                conversation=self.conversation,
-                role='user',
-                content=f'User message {i}'
+                conversation=self.conversation, role="user", content=f"User message {i}"
             )
             for i in range(3)
         ]
 
         Message.objects.create(
             conversation=self.conversation,
-            role='assistant',
-            content='Assistant response',
-            metadata={'citations': []}
+            role="assistant",
+            content="Assistant response",
+            metadata={"citations": []},
         )
 
     def test_delete_conversation_success(self):
         """Test successful conversation deletion"""
-        url = reverse('chat:conversation-detail', kwargs={'conversation_id': self.conversation.id})
-
-        response = self.client.delete(
-            url,
-            HTTP_X_SESSION_ID='test-session-123'
+        url = reverse(
+            "chat:conversation-detail", kwargs={"conversation_id": self.conversation.id}
         )
+
+        response = self.client.delete(url, HTTP_X_SESSION_ID="test-session-123")
 
         assert response.status_code == 204
         assert not Conversation.objects.filter(id=self.conversation.id).exists()
 
     def test_delete_conversation_without_session(self):
         """Test deletion without session header (should succeed if no validation)"""
-        url = reverse('chat:conversation-delete', kwargs={'conversation_id': self.conversation.id})
+        url = reverse(
+            "chat:conversation-delete", kwargs={"conversation_id": self.conversation.id}
+        )
 
         response = self.client.delete(url)
 
@@ -66,15 +63,17 @@ class TestConversationDelete:
 
     def test_delete_conversation_wrong_session(self):
         """Test deletion with wrong session_id"""
-        url = reverse('chat:conversation-delete', kwargs={'conversation_id': self.conversation.id})
-
-        response = self.client.delete(
-            url,
-            HTTP_X_SESSION_ID='wrong-session-456'
+        url = reverse(
+            "chat:conversation-delete", kwargs={"conversation_id": self.conversation.id}
         )
 
+        response = self.client.delete(url, HTTP_X_SESSION_ID="wrong-session-456")
+
         assert response.status_code == 403
-        assert response.data['error'] == 'You do not have permission to delete this conversation'
+        assert (
+            response.data["error"]
+            == "You do not have permission to delete this conversation"
+        )
 
         # Conversation should still exist
         assert Conversation.objects.filter(id=self.conversation.id).exists()
@@ -82,7 +81,7 @@ class TestConversationDelete:
     def test_delete_conversation_not_found(self):
         """Test deleting non-existent conversation"""
         fake_id = uuid.uuid4()
-        url = reverse('chat:conversation-delete', kwargs={'conversation_id': fake_id})
+        url = reverse("chat:conversation-delete", kwargs={"conversation_id": fake_id})
 
         response = self.client.delete(url)
 
@@ -93,16 +92,15 @@ class TestConversationDelete:
         conversation_id = self.conversation.id
         message_ids = [msg.id for msg in self.messages]
 
-        url = reverse('chat:conversation-delete', kwargs={'conversation_id': conversation_id})
+        url = reverse(
+            "chat:conversation-delete", kwargs={"conversation_id": conversation_id}
+        )
 
         # Verify messages exist before deletion
         assert Message.objects.filter(conversation_id=conversation_id).count() == 4
 
         # Delete conversation
-        response = self.client.delete(
-            url,
-            HTTP_X_SESSION_ID='test-session-123'
-        )
+        response = self.client.delete(url, HTTP_X_SESSION_ID="test-session-123")
 
         assert response.status_code == 204
 
@@ -112,9 +110,11 @@ class TestConversationDelete:
 
     def test_delete_with_session_in_query_param(self):
         """Test deletion with session_id in query parameter"""
-        url = reverse('chat:conversation-delete', kwargs={'conversation_id': self.conversation.id})
+        url = reverse(
+            "chat:conversation-delete", kwargs={"conversation_id": self.conversation.id}
+        )
 
-        response = self.client.delete(f'{url}?session_id=test-session-123')
+        response = self.client.delete(f"{url}?session_id=test-session-123")
 
         assert response.status_code == 204
         assert not Conversation.objects.filter(id=self.conversation.id).exists()
@@ -123,22 +123,17 @@ class TestConversationDelete:
         """Test that deleting one conversation doesn't affect others"""
         # Create another conversation
         other_conversation = Conversation.objects.create(
-            session_id='other-session',
-            title='Other Conversation',
-            language='en'
+            session_id="other-session", title="Other Conversation", language="en"
         )
         Message.objects.create(
-            conversation=other_conversation,
-            role='user',
-            content='Other message'
+            conversation=other_conversation, role="user", content="Other message"
         )
 
         # Delete first conversation
-        url = reverse('chat:conversation-delete', kwargs={'conversation_id': self.conversation.id})
-        response = self.client.delete(
-            url,
-            HTTP_X_SESSION_ID='test-session-123'
+        url = reverse(
+            "chat:conversation-delete", kwargs={"conversation_id": self.conversation.id}
         )
+        response = self.client.delete(url, HTTP_X_SESSION_ID="test-session-123")
 
         assert response.status_code == 204
 
@@ -157,22 +152,21 @@ class TestConversationDeleteEdgeCases:
     def test_delete_with_invalid_uuid_format(self):
         """Test deletion with malformed UUID"""
         # Django will return 404 for invalid UUID format
-        response = self.client.delete('/api/chat/conversations/not-a-uuid/delete/')
+        response = self.client.delete("/api/chat/conversations/not-a-uuid/delete/")
 
         assert response.status_code == 404
 
     def test_delete_with_special_characters_in_session(self):
         """Test deletion with special characters in session_id"""
         conversation = Conversation.objects.create(
-            session_id='session-with-special!@#$%',
-            title='Test',
-            language='en'
+            session_id="session-with-special!@#$%", title="Test", language="en"
         )
 
-        url = reverse('chat:conversation-delete', kwargs={'conversation_id': conversation.id})
+        url = reverse(
+            "chat:conversation-delete", kwargs={"conversation_id": conversation.id}
+        )
         response = self.client.delete(
-            url,
-            HTTP_X_SESSION_ID='session-with-special!@#$%'
+            url, HTTP_X_SESSION_ID="session-with-special!@#$%"
         )
 
         assert response.status_code == 204

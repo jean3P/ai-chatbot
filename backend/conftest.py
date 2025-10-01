@@ -23,7 +23,7 @@ def django_db_setup(django_db_setup, django_db_blocker):
 
     # Run migrations automatically
     with django_db_blocker.unblock():
-        call_command('migrate', '--noinput', verbosity=0)
+        call_command("migrate", "--noinput", verbosity=0)
 
 
 @pytest.fixture(autouse=True)

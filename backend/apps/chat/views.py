@@ -319,21 +319,23 @@ def _chat_old_architecture(data):
         )
 
 
-@api_view(['GET', 'DELETE'])
+@api_view(["GET", "DELETE"])
 @permission_classes([AllowAny])
 def conversation_detail(request, conversation_id):
     """Get or delete a single conversation"""
-    if request.method == 'GET':
+    if request.method == "GET":
         conversation = get_object_or_404(Conversation, id=conversation_id)
         serializer = ConversationSerializer(conversation)
         return Response(serializer.data)
 
-    elif request.method == 'DELETE':
+    elif request.method == "DELETE":
         try:
             conversation = get_object_or_404(Conversation, id=conversation_id)
 
             # Validate ownership via session_id
-            session_id = request.headers.get('X-Session-ID') or request.GET.get('session_id')
+            session_id = request.headers.get("X-Session-ID") or request.GET.get(
+                "session_id"
+            )
 
             if session_id and conversation.session_id != session_id:
                 logger.warning(
@@ -342,8 +344,8 @@ def conversation_detail(request, conversation_id):
                     f"request from {session_id}"
                 )
                 return Response(
-                    {'error': 'You do not have permission to delete this conversation'},
-                    status=status.HTTP_403_FORBIDDEN
+                    {"error": "You do not have permission to delete this conversation"},
+                    status=status.HTTP_403_FORBIDDEN,
                 )
 
             # Log deletion for audit
@@ -362,12 +364,12 @@ def conversation_detail(request, conversation_id):
         except Exception as e:
             logger.error(f"Error deleting conversation {conversation_id}: {e}")
             return Response(
-                {'error': 'Failed to delete conversation'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to delete conversation"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 
-@api_view(['DELETE'])
+@api_view(["DELETE"])
 @permission_classes([AllowAny])
 def conversation_delete(request, conversation_id):
     """
@@ -379,7 +381,9 @@ def conversation_delete(request, conversation_id):
         conversation = get_object_or_404(Conversation, id=conversation_id)
 
         # Validate ownership via session_id
-        session_id = request.headers.get('X-Session-ID') or request.GET.get('session_id')
+        session_id = request.headers.get("X-Session-ID") or request.GET.get(
+            "session_id"
+        )
 
         if session_id and conversation.session_id != session_id:
             logger.warning(
@@ -388,8 +392,8 @@ def conversation_delete(request, conversation_id):
                 f"request from {session_id}"
             )
             return Response(
-                {'error': 'You do not have permission to delete this conversation'},
-                status=status.HTTP_403_FORBIDDEN
+                {"error": "You do not have permission to delete this conversation"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         # Log deletion for audit
@@ -412,8 +416,8 @@ def conversation_delete(request, conversation_id):
     except Exception as e:
         logger.error(f"Error deleting conversation {conversation_id}: {e}")
         return Response(
-            {'error': 'Failed to delete conversation'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to delete conversation"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
