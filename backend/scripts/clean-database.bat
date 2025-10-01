@@ -1,5 +1,5 @@
 @echo off
-REM scripts/clean-database.bat
+REM backend/scripts/clean-database.bat
 REM Clean development or test database (Windows)
 
 if "%1"=="" (

@@ -1,5 +1,5 @@
 #!/bin/bash
-# scripts/load-real-pdfs.sh
+# backend/scripts/load-real-pdfs.sh
 # Clear seeded data and load real PDFs
 
 set -e
@@ -28,7 +28,7 @@ echo ""
 echo -e "${YELLOW}Processing real PDFs from backend/media/documents...${NC}"
 
 uv run python manage.py batch_upload_documents \
-    backend/media/documents \
+    ./media/documents \
     --process \
     --language en \
     --verbosity 2

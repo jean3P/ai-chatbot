@@ -1,4 +1,5 @@
 #!/bin/bash
+# backend/scripts/run-migrations.sh
 # scripts/run-migrations.sh
 # Helper script to run migrations with superuser privileges
 

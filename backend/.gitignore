@@ -76,6 +76,7 @@ static_collected/
 .env.*.local
 .env.example
 .env.development
+.env.migrations
 .env.test
 *.env
 

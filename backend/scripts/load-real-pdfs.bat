@@ -1,5 +1,5 @@
 @echo off
-REM scripts/load-real-pdfs.bat
+REM backend/scripts/load-real-pdfs.bat
 REM Clear seeded data and load real PDFs (Windows)
 
 echo Clearing seeded data...
@@ -23,7 +23,7 @@ echo.
 echo Processing real PDFs from backend\media\documents...
 echo.
 
-uv run python manage.py batch_upload_documents backend\media\documents --process --language en --verbosity 2
+uv run python manage.py batch_upload_documents .\media\documents --process --language en --verbosity 2
 
 echo.
 echo Done! Real PDFs loaded and processed.

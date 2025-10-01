@@ -1130,6 +1130,12 @@ open htmlcov/index.html  # Mac
 xdg-open htmlcov/index.html  # Linux
 start htmlcov\index.html  # Windows
 ```
+**Note:** Test database migrations run automatically via pytest fixtures.
+
+### Manual Test Database Setup (if needed)
+```bash
+uv run python manage.py migrate --settings=config.settings.test
+```
 
 ### Test Database
 
