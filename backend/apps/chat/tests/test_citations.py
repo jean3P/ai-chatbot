@@ -103,10 +103,10 @@ class TestCitationSerialization(TestCase):
                         "document": "Old Format Doc",
                         "page": 5,
                         "text": "Old format text...",
-                        "similarity_score": 0.75
+                        "similarity_score": 0.75,
                     }
                 ]
-            }
+            },
         )
 
         # Serialize
@@ -114,13 +114,15 @@ class TestCitationSerialization(TestCase):
         data = serializer.data
 
         # Should still return citations (converted to new format)
-        assert 'citations' in data
-        assert len(data['citations']) == 1
-        citation = data['citations'][0]
+        assert "citations" in data
+        assert len(data["citations"]) == 1
+        citation = data["citations"][0]
 
         # FIXED: Check for 'document' field since serializer handles old format
-        assert citation['document_title'] == "Old Format Doc"  # ← Changed from checking 'document_title'
-        assert citation['page_number'] == 5
+        assert (
+            citation["document_title"] == "Old Format Doc"
+        )  # ← Changed from checking 'document_title'
+        assert citation["page_number"] == 5
 
     def test_message_with_chunk_enrichment(self):
         """Test that serializer enriches citations by querying chunks"""
@@ -241,9 +243,7 @@ class TestCitationAPIResponse(TestCase):
 
         # Create test document and chunk
         self.document = Document.objects.create(
-            title="Test Manual",
-            document_type="manual",
-            processed=True
+            title="Test Manual", document_type="manual", processed=True
         )
 
         self.chunk = DocumentChunk.objects.create(
@@ -251,7 +251,7 @@ class TestCitationAPIResponse(TestCase):
             content="Test installation instructions",
             page_number=5,
             chunk_index=0,  # ← ADD THIS LINE
-            embedding=[0.1] * 384
+            embedding=[0.1] * 384,
         )
 
     def test_chat_response_includes_citations(self):
