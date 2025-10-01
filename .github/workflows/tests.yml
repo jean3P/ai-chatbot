@@ -94,7 +94,7 @@ jobs:
 
       - name: Run migrations
         run: |
-          uv run python manage.py migrate --settings=config.settings.test --run-syncdb
+          uv run python manage.py migrate --settings=config.settings.test
         env:
           ENVIRONMENT: test
           DB_HOST: localhost
@@ -108,7 +108,7 @@ jobs:
 
       - name: Run tests with pytest
         run: |
-          uv run pytest apps/ -v --tb=short --reuse-db
+          uv run pytest apps/ -v --tb=short
         env:
           ENVIRONMENT: test
           DB_HOST: localhost
