@@ -85,6 +85,9 @@ class ChatService:
             ValidationError: If query is empty or invalid
             InsufficientContextError: If no relevant info found
         """
+        import time
+
+        start_time = time.time()
         # Validate input
         if not query or not query.strip():
             raise ValidationError("Query cannot be empty")
@@ -147,6 +150,7 @@ class ChatService:
                 f"Successfully generated answer with "
                 f"{len(answer.citations)} citations"
             )
+            self._log_answer(answer, assistant_message, query, language, start_time)
 
             return answer
 
@@ -262,3 +266,51 @@ class ChatService:
         }
 
         return fallbacks.get(language, fallbacks["en"])
+
+    def _log_answer(
+        self,
+        answer: Answer,
+        message: Message,
+        query: str,
+        language: str,
+        start_time: float,
+    ):
+        """
+        Log answer generation metrics
+
+        Args:
+            answer: Generated answer object
+            message: Saved message
+            query: User's original query
+            language: Response language
+            start_time: Start timestamp
+        """
+        try:
+            import time
+
+            from apps.chat.models import AnswerLog
+
+            total_latency = (time.time() - start_time) * 1000  # Convert to ms
+
+            AnswerLog.objects.create(
+                message_id=message.id,  # Pass UUID, not domain object
+                query=query,
+                language=language,
+                method=answer.method,
+                strategy_config=answer.metadata.get("strategy_config", {}),
+                chunks_retrieved=answer.metadata.get("chunks_retrieved", 0),
+                chunks_used=answer.source_count,
+                top_similarity_score=answer.metadata.get("top_similarity_score", 0.0),
+                context_used=answer.context_used,
+                llm_model=answer.metadata.get("llm_model", "unknown"),
+                embedding_model=answer.metadata.get("embedding_model", "unknown"),
+                total_tokens=answer.metadata.get("total_tokens", 0),
+                prompt_tokens=answer.metadata.get("prompt_tokens", 0),
+                completion_tokens=answer.metadata.get("completion_tokens", 0),
+                total_latency_ms=total_latency,
+                citations_count=len(answer.citations),
+                sources_count=answer.source_count,
+                had_error=False,
+            )
+        except Exception as e:
+            logger.error(f"Failed to log answer: {e}")
