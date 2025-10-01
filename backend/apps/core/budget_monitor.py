@@ -21,9 +21,9 @@ class BudgetMonitor:
     """Monitor daily cost budget and send alerts"""
 
     def __init__(self):
-        self.daily_budget = getattr(settings, 'DAILY_COST_BUDGET_USD', 50.0)
-        self.alert_threshold = getattr(settings, 'BUDGET_ALERT_THRESHOLD', 0.8)
-        self.alert_email = getattr(settings, 'BUDGET_ALERT_EMAIL', None)
+        self.daily_budget = getattr(settings, "DAILY_COST_BUDGET_USD", 50.0)
+        self.alert_threshold = getattr(settings, "BUDGET_ALERT_THRESHOLD", 0.8)
+        self.alert_email = getattr(settings, "BUDGET_ALERT_EMAIL", None)
 
     def check_budget(self) -> dict:
         """
@@ -38,9 +38,9 @@ class BudgetMonitor:
         # Get today's costs
         today_logs = AnswerLog.objects.filter(created_at__gte=today_start)
 
-        total_cost = today_logs.aggregate(
-            Sum("estimated_cost_usd")
-        )["estimated_cost_usd__sum"] or Decimal(0)
+        total_cost = today_logs.aggregate(Sum("estimated_cost_usd"))[
+            "estimated_cost_usd__sum"
+        ] or Decimal(0)
 
         request_count = today_logs.count()
 

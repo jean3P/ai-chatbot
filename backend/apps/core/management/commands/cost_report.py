@@ -55,9 +55,7 @@ class Command(BaseCommand):
 
         self.stdout.write("=" * 70)
         self.stdout.write(
-            self.style.SUCCESS(
-                f"Cost Report: {start_date.date()} to {end_date.date()}"
-            )
+            self.style.SUCCESS(f"Cost Report: {start_date.date()} to {end_date.date()}")
         )
         self.stdout.write("=" * 70)
 
@@ -65,17 +63,17 @@ class Command(BaseCommand):
         logs = AnswerLog.objects.filter(created_at__gte=start_date)
 
         total_requests = logs.count()
-        total_cost = logs.aggregate(Sum("estimated_cost_usd"))[
-                         "estimated_cost_usd__sum"
-                     ] or 0.0
+        total_cost = (
+            logs.aggregate(Sum("estimated_cost_usd"))["estimated_cost_usd__sum"] or 0.0
+        )
         total_tokens = logs.aggregate(Sum("total_tokens"))["total_tokens__sum"] or 0
 
         # Calculate average latency safely
         avg_latency = 0
         if total_requests > 0:
-            total_latency_sum = logs.aggregate(Sum("total_latency_ms"))[
-                                    "total_latency_ms__sum"
-                                ] or 0
+            total_latency_sum = (
+                logs.aggregate(Sum("total_latency_ms"))["total_latency_ms__sum"] or 0
+            )
             avg_latency = total_latency_sum / total_requests
 
         self.stdout.write(f"\nTotal Requests: {total_requests}")
@@ -111,9 +109,7 @@ class Command(BaseCommand):
                 cost = stat["total_cost"] or 0.0
                 tokens = stat["total_tokens"] or 0
 
-                self.stdout.write(
-                    f"\n{model}:"
-                )
+                self.stdout.write(f"\n{model}:")
                 self.stdout.write(f"  Requests: {count}")
                 self.stdout.write(f"  Cost: ${cost:.2f}")
                 self.stdout.write(f"  Tokens: {tokens:,}")
@@ -156,14 +152,14 @@ class Command(BaseCommand):
                 day = start_date + timedelta(days=day_offset)
                 next_day = day + timedelta(days=1)
 
-                day_logs = logs.filter(
-                    created_at__gte=day,
-                    created_at__lt=next_day
-                )
+                day_logs = logs.filter(created_at__gte=day, created_at__lt=next_day)
 
-                day_cost = day_logs.aggregate(Sum("estimated_cost_usd"))[
-                               "estimated_cost_usd__sum"
-                           ] or 0.0
+                day_cost = (
+                    day_logs.aggregate(Sum("estimated_cost_usd"))[
+                        "estimated_cost_usd__sum"
+                    ]
+                    or 0.0
+                )
                 day_count = day_logs.count()
 
                 self.stdout.write(
@@ -172,18 +168,24 @@ class Command(BaseCommand):
 
         # Budget check
         from django.conf import settings
-        daily_budget = getattr(settings, 'DAILY_COST_BUDGET_USD', None)
+
+        daily_budget = getattr(settings, "DAILY_COST_BUDGET_USD", None)
 
         if daily_budget:
             today_logs = logs.filter(created_at__gte=timezone.now().date())
-            today_cost = today_logs.aggregate(Sum("estimated_cost_usd"))[
-                             "estimated_cost_usd__sum"
-                         ] or 0.0
+            today_cost = (
+                today_logs.aggregate(Sum("estimated_cost_usd"))[
+                    "estimated_cost_usd__sum"
+                ]
+                or 0.0
+            )
 
             budget_pct = (today_cost / daily_budget) * 100
 
             self.stdout.write("\n" + "=" * 70)
-            self.stdout.write(f"Today's Budget: ${today_cost:.2f} / ${daily_budget:.2f}")
+            self.stdout.write(
+                f"Today's Budget: ${today_cost:.2f} / ${daily_budget:.2f}"
+            )
 
             if budget_pct > 100:
                 self.stdout.write(
@@ -201,28 +203,35 @@ class Command(BaseCommand):
         # Export CSV
         if export_csv:
             self._export_csv(logs, export_csv)
-            self.stdout.write(
-                self.style.SUCCESS(f"\n✓ Exported to {export_csv}")
-            )
+            self.stdout.write(self.style.SUCCESS(f"\n✓ Exported to {export_csv}"))
 
     def _export_csv(self, logs, filename):
         """Export logs to CSV"""
         import csv
 
-        with open(filename, 'w', newline='') as csvfile:
+        with open(filename, "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow([
-                'Timestamp', 'Method', 'Model', 'Tokens',
-                'Cost (USD)', 'Latency (ms)', 'Language'
-            ])
+            writer.writerow(
+                [
+                    "Timestamp",
+                    "Method",
+                    "Model",
+                    "Tokens",
+                    "Cost (USD)",
+                    "Latency (ms)",
+                    "Language",
+                ]
+            )
 
             for log in logs:
-                writer.writerow([
-                    log.created_at.isoformat(),
-                    log.method,
-                    log.llm_model,
-                    log.total_tokens,
-                    f"{log.estimated_cost_usd:.4f}",
-                    f"{log.total_latency_ms:.0f}",
-                    log.language,
-                ])
+                writer.writerow(
+                    [
+                        log.created_at.isoformat(),
+                        log.method,
+                        log.llm_model,
+                        log.total_tokens,
+                        f"{log.estimated_cost_usd:.4f}",
+                        f"{log.total_latency_ms:.0f}",
+                        log.language,
+                    ]
+                )

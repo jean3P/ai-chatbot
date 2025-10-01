@@ -102,17 +102,13 @@ class OpenRouterLLM:
 
                 # Calculate cost
                 from apps.infrastructure.pricing import calculate_cost
+
                 cost = calculate_cost(
-                    self.tokens_used["input"],
-                    self.tokens_used["output"],
-                    self.model
+                    self.tokens_used["input"], self.tokens_used["output"], self.model
                 )
                 self.tokens_used["cost_usd"] = cost
 
-                logger.info(
-                    f"Tokens: {self.tokens_used['total']} "
-                    f"(${cost:.4f})"
-                )
+                logger.info(f"Tokens: {self.tokens_used['total']} " f"(${cost:.4f})")
             # Extract content
             content = response.choices[0].message.content
 

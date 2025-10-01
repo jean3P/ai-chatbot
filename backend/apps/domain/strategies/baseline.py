@@ -248,7 +248,7 @@ class BaselineStrategy:
         try:
             response_text = self._llm.generate(messages)
             usage = {}
-            if hasattr(self._llm, 'get_last_usage'):
+            if hasattr(self._llm, "get_last_usage"):
                 usage = self._llm.get_last_usage()
         except Exception as e:
             logger.error(f"LLM generation failed: {e}")
@@ -282,8 +282,10 @@ class BaselineStrategy:
                 "chunks_retrieved": len(chunks),
                 "chunks_used": len(chunks),
                 "top_similarity_score": chunks[0].score if chunks else 0.0,
-                "llm_model": getattr(self._llm, 'model', 'unknown'),
-                "embedding_model": getattr(self._embedder, 'embedding_model', 'unknown'),
+                "llm_model": getattr(self._llm, "model", "unknown"),
+                "embedding_model": getattr(
+                    self._embedder, "embedding_model", "unknown"
+                ),
                 "prompt_tokens": usage.get("input", 0),
                 "completion_tokens": usage.get("output", 0),
                 "total_tokens": usage.get("total", 0),

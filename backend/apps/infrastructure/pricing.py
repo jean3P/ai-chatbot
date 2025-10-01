@@ -19,7 +19,6 @@ MODEL_PRICING = {
         "input": 10.00,
         "output": 30.00,
     },
-
     # Anthropic Claude
     "claude-3-5-sonnet": {
         "input": 3.00,
@@ -29,7 +28,6 @@ MODEL_PRICING = {
         "input": 0.25,
         "output": 1.25,
     },
-
     # Meta Llama
     "meta-llama/llama-3.2-3b-instruct": {
         "input": 0.06,
@@ -39,13 +37,11 @@ MODEL_PRICING = {
         "input": 0.18,
         "output": 0.18,
     },
-
     # Mistral
     "mistralai/mistral-7b-instruct": {
         "input": 0.20,
         "output": 0.20,
     },
-
     # Embeddings
     "text-embedding-3-small": {
         "input": 0.020,
@@ -58,11 +54,7 @@ MODEL_PRICING = {
 }
 
 
-def calculate_cost(
-        prompt_tokens: int,
-        completion_tokens: int,
-        model: str
-) -> float:
+def calculate_cost(prompt_tokens: int, completion_tokens: int, model: str) -> float:
     """
     Calculate cost in USD for an LLM call
 
@@ -79,6 +71,7 @@ def calculate_cost(
     if not pricing:
         # Unknown model - log warning but don't fail
         import logging
+
         logging.warning(f"Unknown model for pricing: {model}")
         return 0.0
 

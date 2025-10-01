@@ -62,7 +62,7 @@ class ChatService:
     # apps/domain/services/chat_service.py
 
     def answer_question(
-            self, conversation_id: UUID, query: str, language: str = "en"
+        self, conversation_id: UUID, query: str, language: str = "en"
     ) -> Answer:
         """
         Generate answer to user's question with cost tracking and budget enforcement
@@ -134,9 +134,7 @@ class ChatService:
             user_message = self._message_repo.save(user_message)
 
             # 5. Get conversation history
-            history = self._message_repo.list_by_conversation(
-                conversation_id, limit=10
-            )
+            history = self._message_repo.list_by_conversation(conversation_id, limit=10)
 
             # 6. Generate answer using RAG
             answer = self._rag_strategy.generate_answer(
@@ -317,11 +315,7 @@ class ChatService:
             llm_model = answer.metadata.get("llm_model", "unknown")
 
             # Calculate cost
-            estimated_cost = calculate_cost(
-                prompt_tokens,
-                completion_tokens,
-                llm_model
-            )
+            estimated_cost = calculate_cost(prompt_tokens, completion_tokens, llm_model)
 
             AnswerLog.objects.create(
                 message_id=message.id,
