@@ -108,7 +108,7 @@ jobs:
 
       - name: Run tests with pytest
         run: |
-          uv run pytest apps/ -v --tb=short
+          uv run pytest apps/ -v --tb=short --create-db --reuse-db=false
         env:
           ENVIRONMENT: test
           DB_HOST: localhost
