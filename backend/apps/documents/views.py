@@ -6,10 +6,11 @@ import logging
 
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from ..core.throttling import UploadEndpointThrottle
 from .models import Document, DocumentChunk
 from .serializers import DocumentChunkSerializer, DocumentSerializer
 
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 @api_view(["GET", "POST"])
 @permission_classes([AllowAny])
+@throttle_classes([UploadEndpointThrottle])
 def document_list(request):
     """List documents or upload a new document"""
     if request.method == "GET":
