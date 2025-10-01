@@ -28,17 +28,16 @@ if env_test_path.exists():
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "test_chatbot"),
-        "USER": os.environ.get("DB_USER", "postgres"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", "postgres"),
-        "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
-        "PORT": DB_PORT,  # Use the early-captured port
+        "NAME": "test_chatbot",  # ← Hardcoded, no os.environ
+        "USER": "postgres",
+        "PASSWORD": "postgres",
+        "HOST": "127.0.0.1",
+        "PORT": "5433",
         "CONN_MAX_AGE": 60,
         "ATOMIC_REQUESTS": True,
         "OPTIONS": {
             "connect_timeout": 10,
             "application_name": "swisson-chatbot-test",
-            "options": "-c search_path=public",
         },
         "TEST": {
             "NAME": "test_chatbot",
