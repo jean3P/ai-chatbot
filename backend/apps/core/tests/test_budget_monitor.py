@@ -2,13 +2,14 @@
 """
 Tests for budget monitoring and alerting
 """
-import pytest
 from datetime import timedelta
 from decimal import Decimal
+
+import pytest
 from django.utils import timezone
 
+from apps.chat.models import AnswerLog, Conversation, Message
 from apps.core.budget_monitor import BudgetMonitor
-from apps.chat.models import AnswerLog, Message, Conversation
 
 
 @pytest.mark.django_db
@@ -23,15 +24,11 @@ class TestBudgetMonitor:
 
         # Create test conversation and message
         self.conversation = Conversation.objects.create(
-            session_id="test-session",
-            language="en",
-            title="Test"
+            session_id="test-session", language="en", title="Test"
         )
 
         self.message = Message.objects.create(
-            conversation=self.conversation,
-            role="assistant",
-            content="Test response"
+            conversation=self.conversation, role="assistant", content="Test response"
         )
 
     def test_budget_check_empty_database(self):
@@ -116,7 +113,7 @@ class TestBudgetMonitor:
             message = Message.objects.create(
                 conversation=self.conversation,
                 role="assistant",
-                content=f"Response {i}"
+                content=f"Response {i}",
             )
             AnswerLog.objects.create(
                 message=message,
@@ -144,7 +141,7 @@ class TestBudgetMonitor:
         yesterday_message = Message.objects.create(
             conversation=self.conversation,
             role="assistant",
-            content="Yesterday response"
+            content="Yesterday response",
         )
         yesterday_log = AnswerLog.objects.create(
             message=yesterday_message,

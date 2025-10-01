@@ -1,7 +1,8 @@
 # apps/core/tests/test_cost_tracking.py
 """Tests for cost tracking functionality"""
-import pytest
 from decimal import Decimal
+
+import pytest
 
 from apps.infrastructure.pricing import calculate_cost, get_model_info
 
@@ -12,9 +13,7 @@ class TestPricing:
     def test_calculate_cost_gpt4o_mini(self):
         """Test cost calculation for gpt-4o-mini"""
         cost = calculate_cost(
-            prompt_tokens=1000,
-            completion_tokens=500,
-            model="gpt-4o-mini"
+            prompt_tokens=1000, completion_tokens=500, model="gpt-4o-mini"
         )
 
         # (1000/1M * 0.150) + (500/1M * 0.600) = 0.00045
