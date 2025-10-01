@@ -1,6 +1,6 @@
 # AI Chatbot - Backend
 
-Enterprise-grade Django backend for RAG-powered chatbot with pgvector semantic search and OpenRouter LLM integration.
+Enterprise-grade Django backend for RAG-powered chatbot with pgvector semantic search, OpenRouter LLM integration, cost tracking, and rate limiting.
 
 ---
 
@@ -16,6 +16,8 @@ Enterprise-grade Django backend for RAG-powered chatbot with pgvector semantic s
 - [Running Migrations](#running-migrations)
 - [Document Processing](#document-processing)
 - [Data Management](#data-management)
+- [Cost Management](#cost-management)
+- [Rate Limiting](#rate-limiting)
 - [Development Workflow](#development-workflow)
 - [Testing](#testing)
 - [Management Commands](#management-commands)
@@ -34,6 +36,11 @@ The Swisson AI Chatbot backend provides:
 
 - **RAG Pipeline**: Document processing with semantic search using pgvector
 - **LLM Integration**: OpenRouter API for multiple AI models
+- **Citation System**: Structured citations with document metadata in responses
+- **Cost Tracking**: Automatic logging of token usage and costs per request
+- **Budget Enforcement**: Daily spending limits with automated alerts
+- **Rate Limiting**: Configurable per-environment request throttling
+- **Observability**: A/B testing, answer logging, and user feedback collection
 - **WebSocket Support**: Real-time chat via Django Channels
 - **Security**: Multi-user database architecture with principle of least privilege
 - **Scalability**: Redis-backed task queue and caching
@@ -89,7 +96,7 @@ psql -h localhost -U chatbot_user -d chatbot_dev -f scripts/create-app-user.sql
 
 # 5. Configure environment
 cp .env.example .env.local
-# Edit .env.local: Add SECRET_KEY and OPENROUTER_API_KEY
+# Edit .env.local: Add SECRET_KEY, OPENROUTER_API_KEY, and budget settings
 
 # 6. Run migrations
 ./scripts/run-migrations.sh  # Unix/Mac/Linux
@@ -198,6 +205,9 @@ documents_document           -- Document metadata
 documents_documentchunk      -- Text chunks with vector embeddings
 chat_conversation            -- User conversation history
 chat_message                -- Messages with LLM responses and citations
+chat_messagefeedback        -- User feedback on responses
+chat_answerlog              -- Cost and performance tracking per request
+core_experiment             -- A/B testing configurations
 
 -- Auth & System
 auth_user                   -- Django users (read-only for app)
@@ -333,6 +343,11 @@ CHUNK_OVERLAP=200
 MAX_RETRIEVAL_CHUNKS=10
 SIMILARITY_THRESHOLD=0.3
 
+# Cost Management
+DAILY_COST_BUDGET_USD=50.0
+BUDGET_ALERT_THRESHOLD=0.8
+BUDGET_ALERT_EMAIL=your-email@example.com
+
 # CORS (for frontend)
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 ```
@@ -385,9 +400,10 @@ uv run python manage.py runserver
 **Log in with your credentials**
 
 The admin interface provides:
-- User management (Authentication and Authorization)
-- Chat history (Conversations, Messages)
-- Document management (Documents, Document chunks)
+- **User management** (Authentication and Authorization)
+- **Chat history** (Conversations, Messages, Message Feedback)
+- **Document management** (Documents, Document chunks)
+- **Observability** (Answer Logs, Experiments)
 - Full database CRUD operations
 
 ### Resetting Forgotten Password
@@ -451,6 +467,8 @@ For production:
 - Limit admin access to necessary users only
 - Use separate admin accounts per person
 - Monitor admin access logs
+
+---
 
 ## Running Migrations
 
@@ -987,6 +1005,352 @@ Database cleaning complete!
 
 ---
 
+## Cost Management
+
+The system automatically tracks LLM usage costs and enforces daily budget limits.
+
+### Configuration
+
+Set budget in `.env.local`:
+
+```bash
+# Cost Management
+DAILY_COST_BUDGET_USD=50.0           # Daily spending limit
+BUDGET_ALERT_THRESHOLD=0.8            # Alert at 80% of budget
+BUDGET_ALERT_EMAIL=admin@example.com  # Email for alerts
+```
+
+### Automatic Cost Tracking
+
+Every LLM request is automatically logged to the `AnswerLog` table with:
+
+- **Token counts**: prompt_tokens, completion_tokens, total_tokens
+- **Model used**: LLM model and embedding model
+- **Cost calculation**: Estimated USD cost based on model pricing
+- **Performance**: Total latency, retrieval time, generation time
+- **Quality metrics**: Chunks retrieved, citations count, similarity scores
+- **Error tracking**: Had error, error type, error message
+
+### Budget Enforcement
+
+Budget is checked **before each request**:
+
+1. **Normal** (< 80%): Requests proceed normally
+2. **Warning** (80-99%): Warning logged, requests continue
+3. **Critical** (≥ 100%): Requests **blocked** with error message
+
+**When budget exceeded:**
+
+```json
+{
+  "error": "Daily cost budget exceeded. Please try again tomorrow or contact support.",
+  "budget_status": {
+    "total_cost": 52.45,
+    "daily_budget": 50.0,
+    "budget_used_pct": 104.9
+  }
+}
+```
+
+### Cost Reports
+
+Generate cost reports with the `cost_report` management command:
+
+**Basic Usage:**
+
+```bash
+# Today's costs
+uv run python manage.py cost_report
+
+# Last 7 days
+uv run python manage.py cost_report --days 7
+
+# Breakdown by model
+uv run python manage.py cost_report --days 7 --by-model
+
+# Breakdown by RAG method
+uv run python manage.py cost_report --days 7 --by-method
+
+# Export to CSV
+uv run python manage.py cost_report --days 30 --export-csv costs.csv
+```
+
+**Example Output:**
+
+```
+======================================================================
+Cost Report: 2025-01-01 to 2025-01-07
+======================================================================
+
+Total Requests: 1,234
+Total Cost: $12.45
+Total Tokens: 1,456,789
+Average Latency: 850ms
+Cost per Request: $0.0101
+
+----------------------------------------------------------------------
+Breakdown by Model:
+----------------------------------------------------------------------
+
+gpt-4o-mini:
+  Requests: 1,100
+  Cost: $10.20
+  Tokens: 1,200,000
+  Avg Cost/Request: $0.0093
+
+mistralai/mistral-7b-instruct:
+  Requests: 134
+  Cost: $2.25
+  Tokens: 256,789
+  Avg Cost/Request: $0.0168
+
+----------------------------------------------------------------------
+Daily Breakdown:
+----------------------------------------------------------------------
+2025-01-01: 180 requests, $1.85
+2025-01-02: 165 requests, $1.62
+2025-01-03: 190 requests, $1.98
+2025-01-04: 175 requests, $1.75
+2025-01-05: 210 requests, $2.15
+2025-01-06: 158 requests, $1.55
+2025-01-07: 156 requests, $1.55
+
+======================================================================
+Today's Budget: $3.42 / $50.00
+✓ Budget usage: 6.8%
+======================================================================
+```
+
+### Monitoring via Django Admin
+
+Access cost tracking in Django Admin:
+
+1. Navigate to **http://localhost:8000/admin/**
+2. Go to **CHAT > Answer logs**
+3. Filter by date, method, model, or error status
+4. View detailed metrics for each request
+
+**Admin Features:**
+- Filter by date range, model, method, language
+- Search by query text or error messages
+- Sort by cost, latency, or tokens
+- Export selected records to CSV
+- View aggregate statistics
+
+### Model Pricing
+
+The system tracks costs for common models:
+
+| Model | Input (per 1M tokens) | Output (per 1M tokens) |
+|-------|----------------------|------------------------|
+| `gpt-4o-mini` | $0.150 | $0.600 |
+| `gpt-4o` | $2.50 | $10.00 |
+| `claude-3-5-sonnet` | $3.00 | $15.00 |
+| `mistralai/mistral-7b-instruct` | $0.20 | $0.20 |
+| `text-embedding-3-small` | $0.020 | $0.00 |
+
+**Update pricing**: Edit `apps/infrastructure/pricing.py`
+
+### Budget Alerts
+
+When budget threshold is reached, the system:
+
+1. **Logs warning** to application logs
+2. **Sends email** to configured address (if set)
+3. **Continues serving** requests (warning level)
+4. **Blocks requests** when 100% exceeded (critical level)
+
+**Email Alert Example:**
+
+```
+Subject: 🚨 Budget Alert: WARNING
+
+Budget Alert for 2025-01-15
+
+Current Status:
+- Total Cost: $42.50
+- Daily Budget: $50.00
+- Budget Used: 85.0%
+- Requests: 1,456
+
+Alert Level: WARNING
+
+View detailed report:
+python manage.py cost_report --days 1 --by-model
+```
+
+### Best Practices
+
+**Development:**
+- Set reasonable daily budgets ($10-50)
+- Monitor costs weekly with reports
+- Review expensive queries in admin
+
+**Production:**
+- Set strict budgets based on expected traffic
+- Configure email alerts for team notification
+- Export daily reports for accounting
+- Monitor cost per request trends
+- Implement user-level cost tracking (future enhancement)
+
+### Cost Optimization Tips
+
+1. **Use cheaper models**: `gpt-4o-mini` vs `gpt-4o` saves ~90%
+2. **Reduce chunk retrieval**: Lower `MAX_RETRIEVAL_CHUNKS` setting
+3. **Limit max tokens**: Set lower `max_tokens` for responses
+4. **Cache common queries**: Implement result caching (future)
+5. **Monitor expensive queries**: Review high-cost requests in admin
+
+---
+
+## Rate Limiting
+
+The system enforces request rate limits to prevent abuse and control costs.
+
+### Configuration
+
+Rate limits are configured per environment in `apps/infrastructure/rate_limit.py`:
+
+| Environment | Anonymous | Authenticated | Chat Endpoint | Uploads |
+|-------------|-----------|---------------|---------------|---------|
+| **Development** | 100/min | 1,000/hour | 50/min | 10/hour |
+| **Staging** | 100/min | 1,000/hour | 50/min | 10/hour |
+| **Production** | 100/min | 1,000/hour | 50/min | 10/hour |
+| **Test** | 1,000/min | 10,000/hour | - | - |
+
+### Rate Limit Types
+
+**1. Anonymous Rate Limit**
+- Based on IP address
+- Applies to unauthenticated requests
+- Default: 100 requests per minute
+
+**2. User Rate Limit**
+- Based on authenticated user ID
+- Higher limits for logged-in users
+- Default: 1,000 requests per hour
+
+**3. Endpoint-Specific Limits**
+- **Chat endpoints** (`/api/chat/`): 50/min (expensive LLM calls)
+- **Upload endpoints** (`/api/documents/upload/`): 10/hour (prevents storage abuse)
+- **Burst protection**: 20 requests/min across all endpoints
+
+### Rate Limit Response
+
+When limit exceeded, API returns `429 Too Many Requests`:
+
+```json
+{
+  "error": "Rate limit exceeded",
+  "message": "Too many requests. Please try again in 42 seconds.",
+  "retry_after": 42
+}
+```
+
+**Response Headers:**
+
+```
+HTTP/1.1 429 Too Many Requests
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: 60
+Retry-After: 42
+```
+
+### Rate Limit Headers
+
+All responses include rate limit information:
+
+- **X-RateLimit-Limit**: Total requests allowed in period
+- **X-RateLimit-Remaining**: Requests remaining in current period
+- **X-RateLimit-Reset**: Seconds until limit resets
+- **Retry-After**: Seconds to wait (only on 429 responses)
+
+### Testing Rate Limits
+
+```bash
+# Test anonymous rate limit
+for i in {1..110}; do
+  curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/api/
+done
+
+# Expected: 100x 200 OK, then 10x 429
+
+# Check headers
+curl -I http://localhost:8000/api/
+```
+
+### Bypassing Rate Limits (Development)
+
+Temporarily disable in `.env.local`:
+
+```bash
+# This doesn't exist yet but shows intent
+RATE_LIMIT_ENABLED=False
+```
+
+Or clear rate limit cache:
+
+```bash
+uv run python manage.py clear_rate_limits
+```
+
+### Managing Rate Limits
+
+**View rate limit usage:**
+
+```bash
+# In Django shell
+uv run python manage.py shell
+```
+
+```python
+from django.core.cache import cache
+
+# Check specific IP
+ip = "192.168.1.1"
+count = cache.get(f"rate_limit:ip:{ip}:min")
+print(f"Requests this minute: {count}")
+```
+
+**Clear rate limits:**
+
+```bash
+# Clear all rate limits
+uv run python manage.py clear_rate_limits
+
+# Clear specific identifier
+uv run python manage.py clear_rate_limits --identifier ip:192.168.1.1
+```
+
+### Production Considerations
+
+**Adjust limits for production:**
+
+1. Monitor actual traffic patterns
+2. Set conservative initial limits
+3. Gradually increase based on usage
+4. Consider user tiers (free/paid)
+5. Implement IP whitelisting for trusted sources
+
+**Example production config:**
+
+```python
+# apps/infrastructure/rate_limit.py
+RATE_LIMIT_CONFIGS = {
+    "production": {
+        "enabled": True,
+        "anon_rate": "60/min",        # Stricter
+        "user_rate": "500/hour",      # Adjusted for avg user
+        "chat_rate": "30/min",        # Limit expensive operations
+        "upload_rate": "5/hour",      # Prevent storage abuse
+        "burst_rate": "10/min",       # Tighter burst control
+    }
+}
+```
+
+---
+
 ## Development Workflow
 
 ### Daily Development
@@ -1207,6 +1571,13 @@ class TestDocumentFeature:
 |---------|---------|---------|
 | `seed_database` | Generate test data | `uv run python manage.py seed_database --size small --clear` |
 
+### Cost & Monitoring
+
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `cost_report` | Generate cost report | `uv run python manage.py cost_report --days 7 --by-model` |
+| `clear_rate_limits` | Clear rate limit cache | `uv run python manage.py clear_rate_limits` |
+
 ### Django Built-in
 
 | Command | Purpose | Example |
@@ -1230,7 +1601,7 @@ uv run python manage.py --help
 # Get help for specific command
 uv run python manage.py batch_upload_documents --help
 uv run python manage.py process_documents --help
-uv run python manage.py seed_database --help
+uv run python manage.py cost_report --help
 ```
 
 ---
@@ -1346,12 +1717,103 @@ while true; do curl -s http://localhost:8000/api/health/db | jq; sleep 5; done
 
 ### Chat API
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/chat/conversations/` | GET | List conversations |
-| `/api/chat/conversations/` | POST | Create conversation |
-| `/api/chat/conversations/{id}/` | GET | Get conversation details |
-| `/api/chat/conversations/{id}/messages/` | POST | Send message |
+| Endpoint | Method | Purpose | Notes |
+|----------|--------|---------|-------|
+| `/api/chat/conversations/` | GET | List conversations | Filter by session_id |
+| `/api/chat/conversations/` | POST | Create conversation | Auto-creates on first message |
+| `/api/chat/conversations/{id}/` | GET | Get conversation details | Includes all messages |
+| `/api/chat/conversations/{id}/` | DELETE | **Delete conversation** | ** Cascade deletes messages** |
+| `/api/chat/conversations/{id}/messages/` | POST | Send message | Returns AI response with citations |
+| `/api/chat/feedback/` | POST | Submit feedback | User feedback on responses |
+
+### Delete Conversation Endpoint 
+
+**Endpoint:** `DELETE /api/chat/conversations/{id}/`
+
+**Purpose:** Delete a conversation and all its messages
+
+**Headers:**
+```
+X-Session-ID: your-session-id  (optional but recommended)
+```
+
+**Success Response (204):**
+```
+No content - conversation deleted successfully
+```
+
+**Error Responses:**
+
+```json
+// 404 Not Found - Conversation doesn't exist
+{
+  "error": "Conversation not found"
+}
+
+// 403 Forbidden - Wrong session ID
+{
+  "error": "You do not have permission to delete this conversation"
+}
+```
+
+**Usage Examples:**
+
+```bash
+# Delete with session validation
+curl -X DELETE \
+  -H "X-Session-ID: abc123" \
+  http://localhost:8000/api/chat/conversations/550e8400-e29b-41d4-a716-446655440000/
+
+# Delete without session validation (works if no session set)
+curl -X DELETE \
+  http://localhost:8000/api/chat/conversations/550e8400-e29b-41d4-a716-446655440000/
+```
+
+**Features:**
+- Cascade deletes all related messages automatically
+- Optional session validation for security
+- Returns 204 No Content on success
+- Returns 404 if conversation doesn't exist
+- Returns 403 if session ID mismatch
+
+### Citation Data in Responses 
+
+Chat responses now include structured citation metadata:
+
+**Response Format:**
+
+```json
+{
+  "success": true,
+  "conversation_id": "550e8400-e29b-41d4-a716-446655440000",
+  "message": {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "role": "assistant",
+    "content": "According to the XPD-42 Manual, Page 15...",
+    "citations": [
+      {
+        "document_title": "XPD-42 User Manual",
+        "page_number": 15,
+        "chunk_text": "Connect the DMX input cable to port 1...",
+        "chunk_id": "770e8400-e29b-41d4-a716-446655440002",
+        "document_id": "880e8400-e29b-41d4-a716-446655440003",
+        "relevance_score": 0.89,
+        "section_title": "Installation"
+      }
+    ],
+    "created_at": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+**Citation Fields:**
+- `document_title`: Human-readable document name
+- `page_number`: Page where information was found
+- `chunk_text`: Preview of cited content (max 500 chars)
+- `chunk_id`: UUID for retrieving full chunk
+- `document_id`: UUID for retrieving full document
+- `relevance_score`: Similarity score (0.0-1.0)
+- `section_title`: Section within document (if available)
 
 ### Documents API
 
@@ -1374,6 +1836,7 @@ ENVIRONMENT=development
 DEBUG=True
 DB_USER=chatbot_app
 ALLOWED_HOSTS=localhost,127.0.0.1
+DAILY_COST_BUDGET_USD=50.0
 ```
 
 **Staging:**
@@ -1383,6 +1846,7 @@ DEBUG=False
 DB_USER=chatbot_app
 DB_HOST=<rds-endpoint>
 ALLOWED_HOSTS=staging.yourdomain.com
+DAILY_COST_BUDGET_USD=200.0
 ```
 
 **Production:**
@@ -1395,6 +1859,8 @@ ALLOWED_HOSTS=yourdomain.com
 SECURE_SSL_REDIRECT=True
 SESSION_COOKIE_SECURE=True
 CSRF_COOKIE_SECURE=True
+DAILY_COST_BUDGET_USD=500.0
+BUDGET_ALERT_EMAIL=alerts@yourdomain.com
 ```
 
 ### Pre-Deployment Checklist
@@ -1404,11 +1870,14 @@ CSRF_COOKIE_SECURE=True
 - [ ] Use strong database passwords
 - [ ] Configure `ALLOWED_HOSTS`
 - [ ] Enable SSL/HTTPS
+- [ ] Set production budget limits
+- [ ] Configure email alerts
 - [ ] Setup error monitoring (Sentry)
 - [ ] Configure S3 for media files
 - [ ] Setup automated backups
 - [ ] Review security settings
 - [ ] Test migrations in staging
+- [ ] Test rate limits
 - [ ] Document rollback procedure
 
 ### Deployment Commands
@@ -1425,6 +1894,9 @@ python manage.py migrate
 
 # Verify health
 curl https://api.yourdomain.com/api/health/db
+
+# Generate initial cost report
+python manage.py cost_report --days 1
 ```
 
 ### Additional Resources
@@ -1616,6 +2088,67 @@ source .venv/bin/activate  # Unix/Mac
 python manage.py runserver
 ```
 
+### Rate Limit Issues
+
+**Error:**
+```
+429 Too Many Requests
+```
+
+**Check rate limit status:**
+
+```bash
+# View headers
+curl -I http://localhost:8000/api/
+
+# Output shows:
+# X-RateLimit-Limit: 100
+# X-RateLimit-Remaining: 0
+# Retry-After: 42
+```
+
+**Solutions:**
+
+```bash
+# Wait for the time specified in Retry-After header
+# Or clear rate limits (development only)
+uv run python manage.py clear_rate_limits
+
+# Or for specific IP
+uv run python manage.py clear_rate_limits --identifier ip:192.168.1.1
+```
+
+### Budget Exceeded Errors
+
+**Error:**
+```json
+{
+  "error": "Daily cost budget exceeded. Please try again tomorrow or contact support."
+}
+```
+
+**Check budget status:**
+
+```bash
+# Run cost report
+uv run python manage.py cost_report
+
+# View in Django admin
+# http://localhost:8000/admin/ -> CHAT -> Answer logs
+```
+
+**Solutions:**
+
+```bash
+# Option 1: Increase budget in .env.local
+DAILY_COST_BUDGET_USD=100.0
+
+# Option 2: Wait until next day (resets at midnight UTC)
+
+# Option 3: Clear cost tracking (development only - loses data)
+./scripts/clean-database.sh dev
+```
+
 ---
 
 ## Project Structure
@@ -1625,45 +2158,35 @@ backend/
 ├── apps/                           # Django applications
 │   ├── adapters/                   # External service integrations
 │   │   ├── embeddings/            # Embedding model adapters
-│   │   │   ├── __init__.py
-│   │   │   └── sentence_transformers.py
 │   │   ├── llm/                   # LLM provider adapters
-│   │   │   ├── __init__.py
-│   │   │   └── openrouter.py
 │   │   ├── parsing/               # Document parsing
-│   │   │   ├── __init__.py
-│   │   │   ├── fake.py
-│   │   │   └── pymupdf_parser.py
 │   │   ├── repositories/          # Data access layer
-│   │   │   ├── __init__.py
-│   │   │   ├── django_repos.py
-│   │   │   └── inmemory_repos.py
 │   │   └── retrieval/             # Vector store implementations
-│   │       ├── __init__.py
-│   │       ├── fake.py
-│   │       ├── numpy_store.py
-│   │       └── pgvector_store.py
 │   ├── chat/                      # Chat functionality
 │   │   ├── migrations/
 │   │   ├── __init__.py
-│   │   ├── admin.py
+│   │   ├── admin.py               # Admin for conversations, messages, feedback, answer logs
 │   │   ├── apps.py
 │   │   ├── consumers.py           # WebSocket consumers
-│   │   ├── models.py              # Conversation, Message
+│   │   ├── models.py              # Conversation, Message, MessageFeedback, AnswerLog
 │   │   ├── routing.py
-│   │   ├── serializers.py
+│   │   ├── serializers.py         # Enhanced with citation data
 │   │   ├── urls.py
-│   │   └── views.py
+│   │   └── views.py               # DELETE conversation endpoint, citation support
 │   ├── core/                      # Core utilities
 │   │   ├── management/
 │   │   │   └── commands/
-│   │   │       └── seed_database.py  # Test data generator
+│   │   │       ├── seed_database.py
+│   │   │       ├── cost_report.py     #  Generate cost reports
+│   │   │       └── clear_rate_limits.py #  Clear rate limit cache
 │   │   ├── tests/
-│   │   │   ├── test_database_config.py
-│   │   │   └── test_health_check.py
 │   │   ├── __init__.py
 │   │   ├── apps.py
+│   │   ├── budget_monitor.py      #  Budget enforcement
 │   │   ├── exceptions.py
+│   │   ├── middleware.py          #  Rate limiting middleware
+│   │   ├── models.py              #  Experiment model
+│   │   ├── throttling.py          #  DRF throttle classes
 │   │   ├── urls.py
 │   │   ├── utils.py
 │   │   └── views.py               # Health checks
@@ -1678,26 +2201,18 @@ backend/
 │   │   └── views.py
 │   ├── domain/                    # Business logic (DDD)
 │   │   ├── ports/                 # Interface definitions
-│   │   │   ├── __init__.py
-│   │   │   ├── llm.py
-│   │   │   ├── repositories.py
-│   │   │   └── retriever.py
 │   │   ├── prompts/
-│   │   │   ├── __init__.py
-│   │   │   └── template.py
 │   │   ├── services/
-│   │   │   └── chat_service.py
+│   │   │   └── chat_service.py    # Enhanced with cost tracking
 │   │   ├── strategies/
-│   │   │   ├── __init__.py
-│   │   │   ├── base.py
-│   │   │   └── baseline.py
 │   │   ├── __init__.py
 │   │   └── models.py              # Domain entities
 │   ├── infrastructure/
 │   │   ├── __init__.py
 │   │   ├── config.py
 │   │   ├── container.py           # Dependency injection
-│   │   └── test_container.py
+│   │   ├── pricing.py             #  Model pricing configuration
+│   │   └── rate_limit.py          #  Rate limit configuration
 │   └── rag/                       # RAG pipeline
 │       ├── management/
 │       │   └── commands/
@@ -1712,7 +2227,7 @@ backend/
 ├── config/                        # Django configuration
 │   ├── settings/                  # Environment-specific settings
 │   │   ├── __init__.py
-│   │   ├── base.py               # Common settings
+│   │   ├── base.py               # Enhanced with cost/rate limit settings
 │   │   ├── databases.py          # Database configuration
 │   │   ├── development.py        # Development overrides
 │   │   └── test.py               # Test settings
@@ -1727,17 +2242,17 @@ backend/
 │   └── documents/                # PDF files
 ├── scripts/                       # Utility scripts
 │   ├── create-app-user.sql       # Create restricted DB user
-│   ├── test-app-user-permissions.sql  # Verify permissions
-│   ├── init-db.sql               # Initialize extensions
-│   ├── run-migrations.sh         # Migration helper (Unix)
-│   ├── run-migrations.bat        # Migration helper (Windows)
-│   ├── clean-database.sh         # Clean DB (Unix)
-│   ├── clean-database.bat        # Clean DB (Windows)
-│   ├── load-real-pdfs.sh         # Load PDFs (Unix)
-│   ├── load-real-pdfs.bat        # Load PDFs (Windows)
-│   └── README.md                 # Scripts documentation
+│   ├── test-app-user-permissions.sql
+│   ├── init-db.sql
+│   ├── run-migrations.sh
+│   ├── run-migrations.bat
+│   ├── clean-database.sh
+│   ├── clean-database.bat
+│   ├── load-real-pdfs.sh
+│   ├── load-real-pdfs.bat
+│   └── README.md
 ├── static/                        # Static files
-├── .env.example                   # Environment template
+├── .env.example                   # Enhanced with budget/rate limit vars
 ├── .env.local                     # Local config (gitignored)
 ├── .gitignore
 ├── conftest.py                    # Pytest fixtures
@@ -1749,6 +2264,19 @@ backend/
 └── README.md                      # This file
 ```
 
+**Key Files Updated (✨):**
+- `apps/chat/models.py` - Added `AnswerLog` and `MessageFeedback` models
+- `apps/chat/views.py` - Added DELETE conversation endpoint, citation support
+- `apps/chat/serializers.py` - Enhanced with structured citation data
+- `apps/core/models.py` - Added `Experiment` model for A/B testing
+- `apps/core/budget_monitor.py` -  Budget enforcement system
+- `apps/core/middleware.py` -  Rate limiting middleware
+- `apps/core/throttling.py` -  DRF throttle classes
+- `apps/infrastructure/pricing.py` -  Model pricing configuration
+- `apps/infrastructure/rate_limit.py` -  Rate limit rules per environment
+- `apps/domain/services/chat_service.py` - Enhanced with cost tracking
+- `config/settings/base.py` - Added budget and rate limit settings
+
 ---
 
 ## License
@@ -1758,4 +2286,4 @@ See [LICENSE](./LICENSE) for details.
 
 ---
 
-**Questions?** to jeanpool@swisson.com
+**Questions?** Contact jeanpool@swisson.com
