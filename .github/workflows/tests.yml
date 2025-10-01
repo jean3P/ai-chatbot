@@ -92,23 +92,23 @@ jobs:
           SECRET_KEY: test-secret-key-for-ci
           REDIS_URL: redis://localhost:6379/0
 
-#      - name: Run migrations
-#        run: |
-#          uv run python manage.py migrate --settings=config.settings.test
-#        env:
-#          ENVIRONMENT: test
-#          DB_HOST: localhost
-#          DB_PORT: 5432
-#          DB_NAME: test_chatbot
-#          DB_USER: postgres
-#          DB_PASSWORD: postgres
-#          DEBUG: True
-#          SECRET_KEY: test-secret-key-for-ci
-#          REDIS_URL: redis://localhost:6379/0
+      - name: Run migrations
+        run: |
+          uv run python manage.py migrate --settings=config.settings.test --run-syncdb
+        env:
+          ENVIRONMENT: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: test_chatbot
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DEBUG: True
+          SECRET_KEY: test-secret-key-for-ci
+          REDIS_URL: redis://localhost:6379/0
 
       - name: Run tests with pytest
         run: |
-          uv run pytest apps/ -v --tb=short --create-db
+          uv run pytest apps/ -v --tb=short --reuse-db
         env:
           ENVIRONMENT: test
           DB_HOST: localhost
