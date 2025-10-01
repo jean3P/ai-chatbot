@@ -1,22 +1,117 @@
-# backend/apps/chat/serializers.py
-
+# apps/chat/serializers.py
 """
-Chat API serializers
+Chat API serializers with enhanced citation support
 """
 from rest_framework import serializers
+
+from apps.documents.models import DocumentChunk
 
 from .models import Conversation, Message, MessageFeedback
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    """Serializer for messages"""
+    """
+    Serializer for messages with full citation metadata
+    """
 
-    citations = serializers.ReadOnlyField()
+    citations = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
-        fields = ["id", "role", "content", "citations", "created_at"]
+        fields = ["id", "role", "content", "citations", "created_at", "metadata"]
         read_only_fields = ["id", "created_at"]
+
+    def get_citations(self, obj):
+        """
+        Extract citations from message metadata and enrich with document data
+
+        Returns structured citations for frontend display
+        """
+        # Only assistant messages have citations
+        if obj.role != "assistant":
+            return []
+
+        # Get citation data from metadata
+        citation_data = obj.metadata.get("citations", [])
+
+        if not citation_data:
+            return []
+
+        # If citations already have all required fields, return as-is
+        if citation_data and all(
+            "document_title" in c and "chunk_id" in c for c in citation_data
+        ):
+            return citation_data
+
+        # Convert old format to new format
+        enriched_citations = []
+
+        for citation in citation_data:
+            # Check if this is old format (has 'document' instead of 'document_title')
+            if "document" in citation and "document_title" not in citation:
+                # Convert old format to new format
+                enriched_citations.append(
+                    {
+                        "document_title": citation.get("document", "Unknown Source"),
+                        "page_number": citation.get("page", 0),
+                        "chunk_text": citation.get("text", "")[:500],
+                        "chunk_id": None,
+                        "document_id": None,
+                        "relevance_score": citation.get("similarity_score", 0.0),
+                        "section_title": citation.get("section", ""),
+                    }
+                )
+                continue
+
+            # Extract chunk ID
+            chunk_id = citation.get("chunk_id")
+
+            # If no chunk_id, try to enrich from metadata
+            if not chunk_id:
+                enriched_citations.append(citation)
+                continue
+
+            # Skip if this is a placeholder ID
+            if chunk_id.startswith("citation_"):
+                enriched_citations.append(citation)
+                continue
+
+            # If we have a real chunk_id, query the database
+            try:
+                from apps.documents.models import DocumentChunk
+
+                chunk = DocumentChunk.objects.select_related("document").get(
+                    id=chunk_id
+                )
+
+                enriched_citations.append(
+                    {
+                        "document_title": chunk.document.title,
+                        "page_number": chunk.page_number or 0,
+                        "chunk_text": chunk.content[:500],
+                        "chunk_id": str(chunk.id),
+                        "document_id": str(chunk.document.id),
+                        "relevance_score": citation.get("relevance_score", 0.0),
+                        "section_title": chunk.section_title or "",
+                    }
+                )
+            except:
+                # Chunk not found, return what we have
+                enriched_citations.append(
+                    {
+                        "document_title": citation.get(
+                            "document_title", "Unknown Source"
+                        ),
+                        "page_number": citation.get("page_number", 0),
+                        "chunk_text": citation.get("chunk_text", "")[:500],
+                        "chunk_id": chunk_id,
+                        "document_id": None,
+                        "relevance_score": citation.get("relevance_score", 0.0),
+                        "section_title": citation.get("section_title", ""),
+                    }
+                )
+
+        return enriched_citations
 
 
 class ConversationSerializer(serializers.ModelSerializer):

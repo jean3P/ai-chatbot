@@ -410,7 +410,19 @@ class RAGPipeline:
     def _extract_enhanced_citations(
         self, response: str, similar_chunks: List[Dict], language: str = "en"
     ) -> List[Dict]:
-        """Extract citations with document titles for multiple languages"""
+        """
+        Extract citations with document titles and full metadata for frontend
+
+        Returns citations in format expected by frontend:
+        {
+            "document_title": str,
+            "page_number": int,
+            "chunk_text": str,
+            "chunk_id": str,
+            "document_id": str,
+            "relevance_score": float
+        }
+        """
         citations = []
 
         # Language-specific keywords for detecting citations
@@ -446,17 +458,27 @@ class RAGPipeline:
                     break
 
             if citation_found:
+                # Get chunk object to access IDs
+                chunk_obj = chunk.get("chunk")
+
                 citations.append(
                     {
-                        "id": f"citation_{i}",
-                        "document": doc_title,
-                        "page": page_num,
-                        "section": chunk.get("section_title", ""),
-                        "text": chunk["content"][:200] + "...",
-                        "similarity_score": chunk["similarity_score"],
+                        # Frontend expected fields
+                        "document_title": doc_title,
+                        "page_number": page_num,
+                        "chunk_text": chunk["content"][:500],  # Limit to 500 chars
+                        "chunk_id": str(chunk_obj.id) if chunk_obj else None,
+                        "document_id": (
+                            str(chunk_obj.document_id) if chunk_obj else None
+                        ),
+                        "relevance_score": chunk["similarity_score"],
+                        # Additional metadata (optional, for debugging)
+                        "section_title": chunk.get("section_title", ""),
+                        "embedding_model": chunk.get("embedding_model", "unknown"),
                     }
                 )
 
+        logger.info(f"Extracted {len(citations)} citations for frontend")
         return citations
 
     def _build_context(self, similar_chunks: List[Dict]) -> str:
