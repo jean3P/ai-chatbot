@@ -25,6 +25,7 @@ from apps.domain.models import (
 )
 from apps.domain.ports.repositories import IConversationRepository, IMessageRepository
 from apps.domain.strategies.base import IRagStrategy
+from apps.infrastructure.feature_flags import feature_flags
 from apps.infrastructure.pricing import calculate_cost
 
 logger = logging.getLogger(__name__)
@@ -101,23 +102,24 @@ class ChatService:
             logger.warning(f"Invalid language '{language}', defaulting to 'en'")
             language = "en"
 
-        # 2. Check budget before processing (NEW)
-        budget_status = budget_monitor.check_budget()
+        # 2. Check budget before processing
+        # Check budget only if cost tracking enabled
+        if feature_flags.is_enabled('ENABLE_COST_TRACKING', default=True):
+            budget_status = budget_monitor.check_budget()
 
-        if budget_status["alert_level"] == "critical":
-            logger.error(
-                f"Daily budget exceeded: ${budget_status['total_cost']:.2f} / "
-                f"${budget_status['daily_budget']:.2f}"
-            )
-            raise ValidationError(
-                "Daily cost budget exceeded. Please try again tomorrow or contact support."
-            )
+            if budget_status["alert_level"] == "critical":
+                logger.error(
+                    f"Daily budget exceeded: ${budget_status['total_cost']:.2f} / "
+                    f"${budget_status['daily_budget']:.2f}"
+                )
+                raise ValidationError(
+                    "Daily cost budget exceeded. Please try again tomorrow or contact support."
+                )
 
-        # Log warning if approaching limit
-        if budget_status["alert_level"] == "warning":
-            logger.warning(
-                f"Budget warning: {budget_status['budget_used_pct']:.1f}% used"
-            )
+            if budget_status["alert_level"] == "warning":
+                logger.warning(
+                    f"Budget warning: {budget_status['budget_used_pct']:.1f}% used"
+                )
 
         # 3. Load conversation
         conversation = self._conversation_repo.get(conversation_id)
@@ -306,7 +308,12 @@ class ChatService:
             start_time: Start timestamp
         """
         try:
-            total_latency = (time.time() - start_time) * 1000  # Convert to ms
+            total_latency = (time.time() - start_time) * 1000
+
+            # Check if cost tracking is enabled
+            if not feature_flags.is_enabled('ENABLE_COST_TRACKING', default=True):
+                logger.debug("Cost tracking disabled by feature flag")
+                return
 
             # Get token usage from metadata
             prompt_tokens = answer.metadata.get("prompt_tokens", 0)
