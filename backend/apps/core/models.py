@@ -98,40 +98,32 @@ class FeatureFlag(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
-        max_length=100,
-        unique=True,
-        help_text="Flag identifier (e.g., 'USE_PGVECTOR')"
+        max_length=100, unique=True, help_text="Flag identifier (e.g., 'USE_PGVECTOR')"
     )
-    enabled = models.BooleanField(
-        default=False,
-        help_text="Global on/off switch"
-    )
+    enabled = models.BooleanField(default=False, help_text="Global on/off switch")
     rollout_percentage = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         default=0.00,
-        help_text="Percentage of users to enable (0-100). Only applies if enabled=True"
+        help_text="Percentage of users to enable (0-100). Only applies if enabled=True",
     )
-    description = models.TextField(
-        blank=True,
-        help_text="What this flag controls"
-    )
+    description = models.TextField(blank=True, help_text="What this flag controls")
 
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(
-        'auth.User',
+        "auth.User",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='created_flags'
+        related_name="created_flags",
     )
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]
         indexes = [
-            models.Index(fields=['name', 'enabled']),
+            models.Index(fields=["name", "enabled"]),
         ]
 
     def __str__(self):
@@ -148,6 +140,4 @@ class FeatureFlag(models.Model):
     def clean(self):
         """Validate rollout percentage"""
         if self.rollout_percentage < 0 or self.rollout_percentage > 100:
-            raise ValidationError({
-                'rollout_percentage': 'Must be between 0 and 100'
-            })
+            raise ValidationError({"rollout_percentage": "Must be between 0 and 100"})

@@ -8,8 +8,8 @@ import hashlib
 import logging
 from typing import Optional
 
-from django.core.cache import cache
 from django.conf import settings
+from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +32,11 @@ class FeatureFlagService:
         self.cache_prefix = "feature_flag:"
 
     def is_enabled(
-            self,
-            flag_name: str,
-            user_id: Optional[str] = None,
-            session_id: Optional[str] = None,
-            default: bool = False
+        self,
+        flag_name: str,
+        user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        default: bool = False,
     ) -> bool:
         """
         Check if a feature flag is enabled
@@ -74,11 +74,11 @@ class FeatureFlagService:
             cache.set(cache_key, flag_data, FLAG_CACHE_TTL)
 
         # Check if flag is globally disabled
-        if not flag_data['enabled']:
+        if not flag_data["enabled"]:
             return False
 
         # Check rollout percentage
-        rollout_pct = flag_data['rollout_percentage']
+        rollout_pct = flag_data["rollout_percentage"]
 
         # Full rollout
         if rollout_pct >= 100:
@@ -102,22 +102,24 @@ class FeatureFlagService:
                 return None
 
             return {
-                'enabled': flag.enabled,
-                'rollout_percentage': float(flag.rollout_percentage),
-                'description': flag.description,
+                "enabled": flag.enabled,
+                "rollout_percentage": float(flag.rollout_percentage),
+                "description": flag.description,
             }
         except Exception as e:
             logger.error(f"Error loading flag {flag_name}: {e}")
             return None
 
-    def _is_in_rollout(self, flag_name: str, identifier: str, rollout_pct: float) -> bool:
+    def _is_in_rollout(
+        self, flag_name: str, identifier: str, rollout_pct: float
+    ) -> bool:
         """
         Determine if identifier is in rollout percentage
 
         Uses consistent hashing to ensure same user always gets same result.
         """
         # Create hash of flag_name + identifier
-        hash_input = f"{flag_name}:{identifier}".encode('utf-8')
+        hash_input = f"{flag_name}:{identifier}".encode("utf-8")
         hash_value = int(hashlib.md5(hash_input).hexdigest(), 16)
 
         # Convert to percentage (0-100)
@@ -145,6 +147,7 @@ class FeatureFlagService:
             # Clear all flag caches - iterate through known keys
             try:
                 from apps.core.models import FeatureFlag
+
                 for flag in FeatureFlag.objects.all():
                     cache_key = self._get_cache_key(flag.name)
                     cache.delete(cache_key)
@@ -165,9 +168,9 @@ class FeatureFlagService:
             flags = {}
             for flag in FeatureFlag.objects.all():
                 flags[flag.name] = {
-                    'enabled': flag.enabled,
-                    'rollout_percentage': float(flag.rollout_percentage),
-                    'description': flag.description,
+                    "enabled": flag.enabled,
+                    "rollout_percentage": float(flag.rollout_percentage),
+                    "description": flag.description,
                 }
             return flags
         except Exception as e:

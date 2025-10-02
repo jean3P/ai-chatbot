@@ -13,13 +13,13 @@ class TestFeatureFlagModel:
     def test_create_flag(self):
         """Test creating a feature flag"""
         flag = FeatureFlag.objects.create(
-            name='TEST_FLAG',
+            name="TEST_FLAG",
             enabled=True,
             rollout_percentage=50.0,
-            description='Test flag'
+            description="Test flag",
         )
 
-        assert flag.name == 'TEST_FLAG'
+        assert flag.name == "TEST_FLAG"
         assert flag.enabled is True
         assert flag.rollout_percentage == 50.0
         assert not flag.is_full_rollout
@@ -27,9 +27,7 @@ class TestFeatureFlagModel:
     def test_full_rollout_property(self):
         """Test is_full_rollout property"""
         flag = FeatureFlag.objects.create(
-            name='FULL_FLAG',
-            enabled=True,
-            rollout_percentage=100.0
+            name="FULL_FLAG", enabled=True, rollout_percentage=100.0
         )
 
         assert flag.is_full_rollout
@@ -47,24 +45,20 @@ class TestFeatureFlagService:
     def test_flag_enabled_full_rollout(self):
         """Test flag with full rollout"""
         FeatureFlag.objects.create(
-            name='FULL_FLAG',
-            enabled=True,
-            rollout_percentage=100.0
+            name="FULL_FLAG", enabled=True, rollout_percentage=100.0
         )
 
-        assert self.service.is_enabled('FULL_FLAG') is True
+        assert self.service.is_enabled("FULL_FLAG") is True
 
     def test_flag_disabled(self):
         """Test disabled flag"""
         FeatureFlag.objects.create(
-            name='DISABLED_FLAG',
-            enabled=False,
-            rollout_percentage=100.0
+            name="DISABLED_FLAG", enabled=False, rollout_percentage=100.0
         )
 
-        assert self.service.is_enabled('DISABLED_FLAG') is False
+        assert self.service.is_enabled("DISABLED_FLAG") is False
 
     def test_flag_not_found_uses_default(self):
         """Test non-existent flag uses default"""
-        assert self.service.is_enabled('NONEXISTENT', default=True) is True
-        assert self.service.is_enabled('NONEXISTENT', default=False) is False
+        assert self.service.is_enabled("NONEXISTENT", default=True) is True
+        assert self.service.is_enabled("NONEXISTENT", default=False) is False

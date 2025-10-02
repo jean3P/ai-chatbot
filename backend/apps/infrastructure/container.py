@@ -101,7 +101,7 @@ def create_vector_store(config: Dict[str, Any]):
     from apps.infrastructure.feature_flags import feature_flags
 
     # Check feature flag first
-    use_pgvector = feature_flags.is_enabled('USE_PGVECTOR', default=True)
+    use_pgvector = feature_flags.is_enabled("USE_PGVECTOR", default=True)
 
     store_type = config.get("type", "numpy")
 
@@ -112,14 +112,17 @@ def create_vector_store(config: Dict[str, Any]):
 
     if store_type == "numpy":
         from apps.adapters.retrieval.numpy_db_store import NumPyDBVectorStore
+
         return NumPyDBVectorStore(auto_load=True)
 
     elif store_type == "pgvector":
         from apps.adapters.retrieval.pgvector_store import PgVectorStore
+
         return PgVectorStore(dimension=config.get("dimension", 384))
 
     elif store_type == "fake":
         from apps.adapters.retrieval.fake import FakeVectorStore
+
         return FakeVectorStore()
 
     else:

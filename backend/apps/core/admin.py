@@ -92,61 +92,66 @@ class ExperimentAdmin(admin.ModelAdmin):
 @admin.register(FeatureFlag)
 class FeatureFlagAdmin(admin.ModelAdmin):
     list_display = [
-        'name',
-        'status_badge',
-        'rollout_display',
-        'description_preview',
-        'updated_at',
+        "name",
+        "status_badge",
+        "rollout_display",
+        "description_preview",
+        "updated_at",
     ]
-    list_filter = ['enabled', 'created_at']
-    search_fields = ['name', 'description']
-    readonly_fields = ['id', 'created_at', 'updated_at', 'created_by']
+    list_filter = ["enabled", "created_at"]
+    search_fields = ["name", "description"]
+    readonly_fields = ["id", "created_at", "updated_at", "created_by"]
 
     fieldsets = (
-        ('Flag Configuration', {
-            'fields': ('name', 'enabled', 'rollout_percentage', 'description')
-        }),
-        ('Metadata', {
-            'fields': ('id', 'created_by', 'created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
+        (
+            "Flag Configuration",
+            {"fields": ("name", "enabled", "rollout_percentage", "description")},
+        ),
+        (
+            "Metadata",
+            {
+                "fields": ("id", "created_by", "created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
     )
 
     def status_badge(self, obj):
         """Visual status indicator"""
         if not obj.enabled:
-            color = '#dc3545'  # red
-            text = 'OFF'
+            color = "#dc3545"  # red
+            text = "OFF"
         elif obj.rollout_percentage < 100:
-            color = '#fd7e14'  # orange
-            text = 'PARTIAL'
+            color = "#fd7e14"  # orange
+            text = "PARTIAL"
         else:
-            color = '#28a745'  # green
-            text = 'ON'
+            color = "#28a745"  # green
+            text = "ON"
 
         return format_html(
             '<span style="background: {}; color: white; padding: 3px 10px; '
             'border-radius: 3px; font-weight: bold;">{}</span>',
-            color, text
+            color,
+            text,
         )
 
-    status_badge.short_description = 'Status'
+    status_badge.short_description = "Status"
 
     def rollout_display(self, obj):
         """Show rollout percentage"""
         if not obj.enabled:
-            return '-'
+            return "-"
         return f"{obj.rollout_percentage}%"
 
-    rollout_display.short_description = 'Rollout'
+    rollout_display.short_description = "Rollout"
 
     def description_preview(self, obj):
         """Truncated description"""
         if len(obj.description) > 60:
-            return obj.description[:60] + '...'
-        return obj.description or '-'
+            return obj.description[:60] + "..."
+        return obj.description or "-"
 
-    description_preview.short_description = 'Description'
+    description_preview.short_description = "Description"
 
     def save_model(self, request, obj, form, change):
         """Set created_by on first save and clear cache"""
@@ -156,11 +161,13 @@ class FeatureFlagAdmin(admin.ModelAdmin):
 
         # Clear cache when flag is saved
         from apps.infrastructure.feature_flags import feature_flags
+
         feature_flags.clear_cache(obj.name)
 
     def delete_model(self, request, obj):
         """Clear cache when flag is deleted"""
         from apps.infrastructure.feature_flags import feature_flags
+
         flag_name = obj.name
         super().delete_model(request, obj)
         feature_flags.clear_cache(flag_name)

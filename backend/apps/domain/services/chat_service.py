@@ -104,7 +104,7 @@ class ChatService:
 
         # 2. Check budget before processing
         # Check budget only if cost tracking enabled
-        if feature_flags.is_enabled('ENABLE_COST_TRACKING', default=True):
+        if feature_flags.is_enabled("ENABLE_COST_TRACKING", default=True):
             budget_status = budget_monitor.check_budget()
 
             if budget_status["alert_level"] == "critical":
@@ -311,7 +311,7 @@ class ChatService:
             total_latency = (time.time() - start_time) * 1000
 
             # Check if cost tracking is enabled
-            if not feature_flags.is_enabled('ENABLE_COST_TRACKING', default=True):
+            if not feature_flags.is_enabled("ENABLE_COST_TRACKING", default=True):
                 logger.debug("Cost tracking disabled by feature flag")
                 return
 
