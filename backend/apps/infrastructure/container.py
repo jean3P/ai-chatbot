@@ -96,14 +96,24 @@ def create_embedding_provider(config: Dict[str, Any]):
 
 def create_vector_store(config: Dict[str, Any]):
     """
-    Factory for vector store based on configuration
+    Factory for vector store based on configuration and feature flags
     """
+    from apps.infrastructure.feature_flags import feature_flags
+
+    # Check feature flag first
+    use_pgvector = feature_flags.is_enabled("USE_PGVECTOR", default=True)
+
     store_type = config.get("type", "numpy")
+
+    # Override with feature flag
+    if not use_pgvector and store_type == "pgvector":
+        logger.info("USE_PGVECTOR flag disabled, falling back to NumPy store")
+        store_type = "numpy"
 
     if store_type == "numpy":
         from apps.adapters.retrieval.numpy_db_store import NumPyDBVectorStore
 
-        return NumPyDBVectorStore(auto_load=True)  # Auto-load from database
+        return NumPyDBVectorStore(auto_load=True)
 
     elif store_type == "pgvector":
         from apps.adapters.retrieval.pgvector_store import PgVectorStore
