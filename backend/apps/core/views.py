@@ -8,13 +8,26 @@ import time
 from django.db import connection
 from django.http import JsonResponse
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_http_methods
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 
 logger = logging.getLogger(__name__)
 
 
+@extend_schema(
+    tags=["Health"],
+    summary="Database health check",
+    description="Check if database connection is healthy and measure latency.",
+    responses={
+        200: OpenApiTypes.OBJECT,
+        503: OpenApiTypes.OBJECT,
+    },
+)
+@api_view(["GET"])
+@permission_classes([AllowAny])
 @never_cache
-@require_http_methods(["GET"])
 def database_health_check(request):
     """
     Database health check endpoint for load balancers and monitoring.

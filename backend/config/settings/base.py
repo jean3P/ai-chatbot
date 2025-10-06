@@ -45,6 +45,7 @@ THIRD_PARTY_APPS = [
     "rest_framework",
     "corsheaders",
     "channels",
+    "drf_spectacular",
 ]
 
 LOCAL_APPS = [
@@ -169,6 +170,7 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_THROTTLE_CLASSES": [
@@ -278,5 +280,41 @@ LOGGING = {
     "root": {
         "handlers": ["console", "file"],
         "level": "INFO",
+    },
+}
+
+# Add drf-spectacular settings at the end of the file
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Swisson AI Chatbot API",
+    "DESCRIPTION": "RAG-powered AI chatbot with document processing and multi-language support",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "CONTACT": {
+        "name": "Swisson Team",
+        "email": "jeanpool@swisson.com",
+    },
+    "LICENSE": {
+        "name": "Proprietary",
+    },
+    # API organization
+    "TAGS": [
+        {"name": "Chat", "description": "Conversation and messaging endpoints"},
+        {"name": "Documents", "description": "Document management and processing"},
+        {"name": "Search", "description": "RAG document search"},
+        {"name": "Health", "description": "System health checks"},
+    ],
+    # Schema customization
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SCHEMA_PATH_PREFIX": "/api/",
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": True,
+        "filter": True,
+    },
+    # Response examples
+    "ENUM_NAME_OVERRIDES": {
+        "FeedbackTypeEnum": "apps.chat.models.MessageFeedback.FEEDBACK_CHOICES",
+        "MessageRoleEnum": "apps.chat.models.Message.ROLE_CHOICES",
     },
 }

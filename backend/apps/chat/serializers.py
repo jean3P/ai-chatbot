@@ -2,6 +2,8 @@
 """
 Chat API serializers with enhanced citation support
 """
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.documents.models import DocumentChunk
@@ -21,6 +23,27 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = ["id", "role", "content", "citations", "created_at", "metadata"]
         read_only_fields = ["id", "created_at"]
 
+    @extend_schema_field(
+        {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "document_title": {"type": "string"},
+                    "page_number": {"type": "integer"},
+                    "chunk_text": {"type": "string"},
+                    "chunk_id": {"type": "string", "format": "uuid", "nullable": True},
+                    "document_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": True,
+                    },
+                    "relevance_score": {"type": "number", "format": "float"},
+                    "section_title": {"type": "string"},
+                },
+            },
+        }
+    )
     def get_citations(self, obj):
         """
         Extract citations from message metadata and enrich with document data
@@ -133,6 +156,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
+    @extend_schema_field(OpenApiTypes.INT)
     def get_message_count(self, obj):
         return obj.messages.count()
 
