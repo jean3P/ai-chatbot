@@ -7,6 +7,7 @@ import time
 
 from django.db import connection
 from django.http import JsonResponse
+from django.views.decorators.cache import never_cache
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view, permission_classes
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 )
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@never_cache
 def database_health_check(request):
     """
     Database health check endpoint for load balancers and monitoring.
