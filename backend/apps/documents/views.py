@@ -5,6 +5,8 @@ Document API views
 import logging
 
 from django.shortcuts import get_object_or_404
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
@@ -17,7 +19,31 @@ from .serializers import DocumentChunkSerializer, DocumentSerializer
 logger = logging.getLogger(__name__)
 
 
-@api_view(["GET", "POST"])
+@extend_schema(
+    tags=["Documents"],
+    summary="List documents",
+    description="Get a paginated list of all documents in the knowledge base.",
+    parameters=[
+        OpenApiParameter(
+            name="document_type",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Filter by document type (e.g., 'manual', 'guide')",
+            required=False,
+        ),
+        OpenApiParameter(
+            name="language",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Filter by language (en, de, fr, es)",
+            required=False,
+        ),
+    ],
+    responses={
+        200: DocumentSerializer(many=True),
+    },
+)
+@api_view(["GET"])
 @permission_classes([AllowAny])
 @throttle_classes([UploadEndpointThrottle])
 def document_list(request):
@@ -42,6 +68,23 @@ def document_list(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    tags=["Documents"],
+    summary="Get document details",
+    description="Retrieve detailed information about a specific document.",
+    parameters=[
+        OpenApiParameter(
+            name="document_id",
+            type=OpenApiTypes.UUID,
+            location=OpenApiParameter.PATH,
+            description="Document UUID",
+        ),
+    ],
+    responses={
+        200: DocumentSerializer,
+        404: OpenApiTypes.OBJECT,
+    },
+)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def document_detail(request, document_id):
@@ -51,6 +94,30 @@ def document_detail(request, document_id):
     return Response(serializer.data)
 
 
+@extend_schema(
+    tags=["Documents"],
+    summary="Get document chunks",
+    description="Retrieve all text chunks for a specific document.",
+    parameters=[
+        OpenApiParameter(
+            name="document_id",
+            type=OpenApiTypes.UUID,
+            location=OpenApiParameter.PATH,
+            description="Document UUID",
+        ),
+        OpenApiParameter(
+            name="page_number",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            description="Filter by page number",
+            required=False,
+        ),
+    ],
+    responses={
+        200: DocumentChunkSerializer(many=True),
+        404: OpenApiTypes.OBJECT,
+    },
+)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def document_chunks(request, document_id):
@@ -61,6 +128,24 @@ def document_chunks(request, document_id):
     return Response(serializer.data)
 
 
+@extend_schema(
+    tags=["Documents"],
+    summary="Search document chunks",
+    description="Search through document chunks by content.",
+    parameters=[
+        OpenApiParameter(
+            name="q",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Search query",
+            required=True,
+        ),
+    ],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+    },
+)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def search_chunks(request):

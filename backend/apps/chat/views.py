@@ -8,6 +8,8 @@ import uuid
 from django.conf import settings
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
@@ -36,6 +38,59 @@ logger = logging.getLogger(__name__)
 USE_NEW_ARCHITECTURE = getattr(settings, "USE_NEW_RAG_ARCHITECTURE", False)
 
 
+@extend_schema(
+    tags=["Chat"],
+    summary="Send chat message",
+    description="Send a message and receive AI-generated response with RAG enhancement. "
+    "Supports conversation history and multiple languages.",
+    request=ChatRequestSerializer,
+    responses={
+        200: MessageSerializer,
+        400: OpenApiTypes.OBJECT,
+        429: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT,
+    },
+    examples=[
+        OpenApiExample(
+            "Chat Request",
+            value={
+                "message": "What are the safety guidelines for working with chemicals?",
+                "conversation_id": "123e4567-e89b-12d3-a456-426614174000",
+                "language": "en",
+                "session_id": "user-session-123",
+            },
+            request_only=True,
+        ),
+        OpenApiExample(
+            "Chat Response",
+            value={
+                "success": True,
+                "conversation_id": "123e4567-e89b-12d3-a456-426614174000",
+                "message": {
+                    "id": "987fcdeb-51a2-43c1-b789-123456789abc",
+                    "role": "assistant",
+                    "content": "When working with chemicals, always wear appropriate PPE...",
+                    "citations": [
+                        {
+                            "document_title": "Safety Manual",
+                            "page_number": 5,
+                            "chunk_text": "Personal protective equipment must include...",
+                            "relevance_score": 0.92,
+                        }
+                    ],
+                    "created_at": "2025-10-06T10:30:00Z",
+                },
+                "rag_metadata": {
+                    "architecture": "new_hexagonal",
+                    "context_used": True,
+                    "sources_count": 3,
+                    "citations_count": 2,
+                },
+            },
+            response_only=True,
+        ),
+    ],
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @throttle_classes([ChatEndpointThrottle])
@@ -321,6 +376,32 @@ def _chat_old_architecture(data):
         )
 
 
+@extend_schema(
+    tags=["Chat"],
+    summary="Get or delete conversation",
+    description="Retrieve conversation details or delete a conversation with all its messages.",
+    parameters=[
+        OpenApiParameter(
+            name="conversation_id",
+            type=OpenApiTypes.UUID,
+            location=OpenApiParameter.PATH,
+            description="Conversation UUID",
+        ),
+        OpenApiParameter(
+            name="X-Session-ID",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.HEADER,
+            description="Session ID for authorization (DELETE only)",
+            required=False,
+        ),
+    ],
+    responses={
+        200: ConversationSerializer,  # GET
+        204: None,  # DELETE
+        403: OpenApiTypes.OBJECT,
+        404: OpenApiTypes.OBJECT,
+    },
+)
 @api_view(["GET", "DELETE"])
 @permission_classes([AllowAny])
 def conversation_detail(request, conversation_id):
@@ -371,6 +452,32 @@ def conversation_detail(request, conversation_id):
             )
 
 
+@extend_schema(
+    tags=["Chat"],
+    summary="Delete conversation (alternative endpoint)",
+    description="Delete a conversation and all its messages. Requires session authorization.",
+    parameters=[
+        OpenApiParameter(
+            name="conversation_id",
+            type=OpenApiTypes.UUID,
+            location=OpenApiParameter.PATH,
+            description="Conversation UUID",
+        ),
+        OpenApiParameter(
+            name="X-Session-ID",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.HEADER,
+            description="Session ID for authorization",
+            required=False,
+        ),
+    ],
+    responses={
+        204: None,
+        403: OpenApiTypes.OBJECT,
+        404: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT,
+    },
+)
 @api_view(["DELETE"])
 @permission_classes([AllowAny])
 def conversation_delete(request, conversation_id):
@@ -423,6 +530,21 @@ def conversation_delete(request, conversation_id):
         )
 
 
+@extend_schema(
+    tags=["Chat"],
+    summary="List conversations",
+    description="List conversations for a session. Returns most recent 20 conversations.",
+    parameters=[
+        OpenApiParameter(
+            name="session_id",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Filter by session ID",
+            required=False,
+        ),
+    ],
+    responses={200: ConversationSerializer(many=True)},
+)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def conversation_list(request):
@@ -438,6 +560,16 @@ def conversation_list(request):
     return Response(serializer.data)
 
 
+@extend_schema(
+    tags=["Chat"],
+    summary="Submit feedback",
+    description="Submit feedback on an assistant message to improve response quality.",
+    request=FeedbackSerializer,
+    responses={
+        201: FeedbackSerializer,
+        400: OpenApiTypes.OBJECT,
+    },
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def feedback(request):
@@ -450,6 +582,41 @@ def feedback(request):
     return Response(FeedbackSerializer(feedback).data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(
+    tags=["Search"],
+    summary="Search documents",
+    description="Search through document chunks using RAG similarity search.",
+    request=OpenApiTypes.OBJECT,
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+    },
+    examples=[
+        OpenApiExample(
+            "Search Request",
+            value={"query": "chemical safety procedures"},
+            request_only=True,
+        ),
+        OpenApiExample(
+            "Search Response",
+            value={
+                "query": "chemical safety procedures",
+                "results": [
+                    {
+                        "document_title": "Safety Manual",
+                        "document_type": "manual",
+                        "page_number": 5,
+                        "section_title": "Chemical Handling",
+                        "content_preview": "When handling chemicals, always follow these procedures...",
+                        "similarity_score": 0.89,
+                    }
+                ],
+                "total_results": 10,
+            },
+            response_only=True,
+        ),
+    ],
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def search_documents(request):
@@ -497,6 +664,12 @@ def search_documents(request):
         )
 
 
+@extend_schema(
+    tags=["Search"],
+    summary="Get RAG statistics",
+    description="Get statistics about the RAG system including document counts and architecture info.",
+    responses={200: OpenApiTypes.OBJECT},
+)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def rag_stats(request):
